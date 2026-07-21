@@ -16,10 +16,14 @@ import jakarta.validation.constraints.NotNull;
 
 import com.campussync.campussync_backend.enums.Role;
 import com.campussync.campussync_backend.enums.UserStatus;
+import lombok.Getter;
+import lombok.Setter;
 
 
 @Entity
 @Table(name="users")
+@Getter
+@Setter
 public class User {
     
     @Id

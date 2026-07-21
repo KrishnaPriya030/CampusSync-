@@ -1,5 +1,11 @@
 package com.campussync.campussync_backend.repository;
+import java.util.Optional;
 
-public class UserRepository {
-    
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.campussync.campussync_backend.entity.User;
+
+
+public interface  UserRepository extends JpaRepository<User,Long>{
+    Optional<User> findByEmail(String email);
 }
