@@ -34,4 +34,6 @@ public class Student {
     private boolean internal;
 
     private String collegeName;
+    private Integer graduationYear;
+private StudentStatus status;
 }
