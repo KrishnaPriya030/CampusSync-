@@ -1,0 +1,8 @@
+    package com.campussync.campussync_backend.exception;
+
+    public class AccountNotActiveException extends RuntimeException {
+
+        public AccountNotActiveException(String message) {
+            super(message);
+        }
+    }

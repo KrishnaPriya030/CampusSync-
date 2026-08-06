@@ -54,5 +54,7 @@ public class User {
      @NotNull
      @Enumerated(EnumType.STRING)
      private UserStatus status;
+      @NotNull
+private boolean firstLogin = true;
 
 }
