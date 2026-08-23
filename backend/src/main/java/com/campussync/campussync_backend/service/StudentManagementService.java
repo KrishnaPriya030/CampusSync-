@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.campussync.campussync_backend.enums.StudentStatus;
 
 import com.campussync.campussync_backend.dto.CreateStudentRequest;
 import com.campussync.campussync_backend.dto.CreateStudentResponse;
@@ -73,6 +74,7 @@ public class StudentManagementService {
         student.setDepartment(department);
         student.setSemester(request.getSemester());
         student.setInternal(true);
+        student.setStatus(StudentStatus.ACTIVE);
 
         studentRepository.save(student);
 

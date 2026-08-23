@@ -50,7 +50,7 @@ throw new InvalidCredentialsException(
         String token=jwtService.generateToken(user.getEmail(),
         user.getRole().name());
         
-        return new LoginResponse(token,user.getId(),user.getName(),user.getEmail(),user.getRole().name());
+        return new LoginResponse(token,user.getId(),user.getName(),user.getEmail(),user.getRole().name(),user.isFirstLogin());
 
     }
     }

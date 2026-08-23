@@ -1,4 +1,5 @@
 package com.campussync.campussync_backend.entity;
+import com.campussync.campussync_backend.enums.StudentStatus;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -35,5 +36,7 @@ public class Student {
 
     private String collegeName;
     private Integer graduationYear;
+    @NotNull
+    @Enumerated(EnumType.STRING)
 private StudentStatus status;
 }

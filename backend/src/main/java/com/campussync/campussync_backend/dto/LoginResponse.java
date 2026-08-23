@@ -7,19 +7,22 @@ public class LoginResponse {
     private String name;
     private String email;
     private String role;
+    private boolean firstLogin;
 
     public LoginResponse(
             String token,
             Long userId,
             String name,
             String email,
-            String role) {
+            String role,
+        boolean firstLogin) {
 
         this.token = token;
         this.userId = userId;
         this.name = name;
         this.email = email;
         this.role = role;
+        this.firstLogin=firstLogin;
     }
 
     public String getToken() {
@@ -40,5 +43,8 @@ public class LoginResponse {
 
     public String getRole() {
         return role;
+    }
+    public boolean isFirstLogin(){
+        return firstLogin;
     }
 }

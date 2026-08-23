@@ -1,6 +1,8 @@
+package com.campussync.campussync_backend.enums;
+
 public enum StudentStatus {
     ACTIVE,
     GRADUATED,
-    DROPPED_OUT,
-    SUSPENDED
+    SUSPENDED,
+    DROPPED_OUT
 }
