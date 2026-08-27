@@ -21,7 +21,7 @@ class CampusSyncApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF8B5CF6)),
       ),
       
-      home:const SplashScreen(),
+      home: SplashScreen(),
     );
   }
 }
