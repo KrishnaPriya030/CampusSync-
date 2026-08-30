@@ -13,6 +13,7 @@ import com.campussync.campussync_backend.entity.User;
 import com.campussync.campussync_backend.enums.UserStatus;
 import com.campussync.campussync_backend.repository.UserRepository;
 import com.campussync.campussync_backend.service.JwtService;
+import com.campussync.campussync_backend.service.TokenRevocationService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,13 +25,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final TokenRevocationService tokenRevocationService;
 
     public JwtAuthenticationFilter(
             JwtService jwtService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            TokenRevocationService tokenRevocationService) {
 
         this.jwtService = jwtService;
         this.userRepository = userRepository;
+        this.tokenRevocationService = tokenRevocationService;
     }
 
     @Override
@@ -40,17 +44,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        System.out.println("\n================ JWT FILTER ================");
-        System.out.println("Request URI : " + request.getRequestURI());
+        String authHeader =
+                request.getHeader("Authorization");
 
-        String authHeader = request.getHeader("Authorization");
-
-        System.out.println("Authorization Header : " + authHeader);
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-
-            System.out.println("No Bearer Token Found");
-            System.out.println("============================================\n");
+        if (authHeader == null
+                || !authHeader.startsWith("Bearer ")) {
 
             filterChain.doFilter(request, response);
             return;
@@ -60,90 +58,82 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            String email = jwtService.extractEmail(token);
+            // Check whether JWT was logged out
+            if (tokenRevocationService.isRevoked(token)) {
 
-            System.out.println("JWT Email : " + email);
+                response.setStatus(
+                        HttpServletResponse.SC_UNAUTHORIZED);
+
+                response.setContentType(
+                        "application/json");
+
+                response.getWriter().write(
+                        "{\"message\":\"Token has been revoked. Please login again.\"}"
+                );
+
+                return;
+            }
+
+            String email =
+                    jwtService.extractEmail(token);
 
             if (email != null
-                    && SecurityContextHolder.getContext()
+                    && SecurityContextHolder
+                            .getContext()
                             .getAuthentication() == null) {
 
-                User user = userRepository.findByEmail(email)
-                        .orElse(null);
+                User user =
+                        userRepository
+                                .findByEmail(email)
+                                .orElse(null);
 
-                if (user == null) {
-
-                    System.out.println("User NOT Found");
-
-                } else {
-
-                    System.out.println(
-                            "User Found : " + user.getEmail()
-                    );
+                if (user != null) {
 
                     boolean valid =
                             jwtService.isTokenValid(
                                     token,
-                                    user.getEmail()
-                            );
-
-                    System.out.println(
-                            "Token Valid : " + valid
-                    );
+                                    user.getEmail());
 
                     if (valid) {
 
-                        System.out.println(
-                                "Role : " + user.getRole()
-                        );
+                        if (user.getStatus()
+                                != UserStatus.ACTIVE) {
 
-                        System.out.println(
-                                "Account Status : " + user.getStatus()
-                        );
+                            filterChain.doFilter(
+                                    request,
+                                    response);
 
-                        if (user.getStatus() != UserStatus.ACTIVE) {
-
-                            System.out.println(
-                                    "Account is not active. "
-                                    + "Authentication rejected."
-                            );
-
-                        } else {
-
-                            UsernamePasswordAuthenticationToken authentication =
-                                    new UsernamePasswordAuthenticationToken(
-                                            user,
-                                            null,
-                                            List.of(
-                                                    new SimpleGrantedAuthority(
-                                                            "ROLE_"
-                                                                    + user.getRole()
-                                                                            .name()
-                                                    )
-                                            )
-                                    );
-
-                            SecurityContextHolder
-                                    .getContext()
-                                    .setAuthentication(authentication);
-
-                            System.out.println(
-                                    "Authentication Added Successfully"
-                            );
+                            return;
                         }
+
+                        UsernamePasswordAuthenticationToken
+                                authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        user,
+                                        null,
+                                        List.of(
+                                                new SimpleGrantedAuthority(
+                                                        "ROLE_"
+                                                                + user.getRole()
+                                                                        .name()
+                                                )
+                                        )
+                                );
+
+                        SecurityContextHolder
+                                .getContext()
+                                .setAuthentication(
+                                        authentication);
                     }
                 }
             }
 
         } catch (Exception e) {
 
-            System.out.println("JWT Exception");
-            e.printStackTrace();
+            // Invalid JWT — continue without authentication
+            SecurityContextHolder
+                    .clearContext();
         }
-
-        System.out.println(
-                "============================================\n"
-        );
 
         filterChain.doFilter(request, response);
     }

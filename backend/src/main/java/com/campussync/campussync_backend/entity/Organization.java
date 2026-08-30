@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.entity;
 
 import java.util.List;
@@ -11,12 +10,18 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
 @Table(name = "organizations")
+@Getter
+@Setter
 public class Organization {
 
     @Id
@@ -32,13 +37,18 @@ public class Organization {
     @Enumerated(EnumType.STRING)
     private OrganizationType organizationType;
 
-  @OneToMany(mappedBy = "organization")
-  private List<Organizer> organizers;
+    /*
+     * Nullable because college-wide organizations
+     * don't belong to a particular department.
+     */
+    @ManyToOne
+    private Department department;
+
+    @OneToMany(mappedBy = "organization")
+    private List<Organizer> organizers;
 
     @NotBlank
     private String description;
 
     private boolean active;
-
 }
-

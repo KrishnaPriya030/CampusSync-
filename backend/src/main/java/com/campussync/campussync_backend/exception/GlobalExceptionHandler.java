@@ -44,4 +44,15 @@ public ResponseEntity<Map<String, String>> handlePasswordMismatch(
                     exception.getMessage()
             ));
 }
+@ExceptionHandler(ActivationTokenException.class)
+public ResponseEntity<Map<String, String>> handleActivationToken(
+        ActivationTokenException exception) {
+
+    return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(Map.of(
+                    "message",
+                    exception.getMessage()
+            ));
+}
 }

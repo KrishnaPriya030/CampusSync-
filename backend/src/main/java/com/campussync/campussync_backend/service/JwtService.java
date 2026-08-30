@@ -2,6 +2,7 @@ package com.campussync.campussync_backend.service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 import javax.crypto.SecretKey;
 
@@ -30,10 +31,16 @@ public class JwtService {
     public String generateToken(String email, String role) {
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(email)
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .expiration(
+                        new Date(
+                                System.currentTimeMillis()
+                                        + expiration
+                        )
+                )
                 .signWith(getSigningKey())
                 .compact();
     }
@@ -48,11 +55,20 @@ public class JwtService {
     }
 
     public String extractEmail(String token) {
-
         return extractAllClaims(token).getSubject();
     }
 
-    public boolean isTokenValid(String token, String email) {
+    public String extractTokenId(String token) {
+        return extractAllClaims(token).getId();
+    }
+
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
+    }
+
+    public boolean isTokenValid(
+            String token,
+            String email) {
 
         try {
 
@@ -66,8 +82,6 @@ public class JwtService {
                     && expirationDate.after(new Date());
 
         } catch (Exception e) {
-
-            e.printStackTrace();
 
             return false;
         }
