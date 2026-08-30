@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/models/user_profile.dart';
 
 import '../storage/token_storage.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required UserProfile user});
 
   @override
   Widget build(BuildContext context) {
