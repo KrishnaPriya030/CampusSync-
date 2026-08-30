@@ -10,15 +10,20 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 
+import lombok.Getter;
+import lombok.Setter;
+
 @Entity
 @Table(name = "departments")
+@Getter
+@Setter
 public class Department {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToMany(mappedBy="department")
+    @OneToMany(mappedBy = "department")
     private List<Student> students;
 
     @NotBlank
@@ -28,6 +33,4 @@ public class Department {
     private String code;
 
     private Boolean active;
-} 
-    
-
+}

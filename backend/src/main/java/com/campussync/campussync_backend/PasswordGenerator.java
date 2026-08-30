@@ -11,7 +11,8 @@ public class PasswordGenerator {
 
         String password = "Temp@123";
 
-        String hashedPassword = encoder.encode(password);
+        String hashedPassword =
+                encoder.encode(password);
 
         System.out.println(hashedPassword);
     }

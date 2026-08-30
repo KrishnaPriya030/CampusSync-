@@ -1,5 +1,7 @@
 package com.campussync.campussync_backend.dto;
 
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,8 +26,22 @@ public class CreateStudentRequest {
     private String registerNumber;
 
     @NotNull
+    private LocalDate dateOfBirth;
+
+    @NotNull
     private Long departmentId;
 
     @NotNull
+    private Long branchId;
+
+    @NotNull
     private Integer semester;
+    @NotBlank
+private String programme;
+
+@NotNull
+private Integer admissionYear;
+
+    @NotNull
+    private Integer graduationYear;
 }

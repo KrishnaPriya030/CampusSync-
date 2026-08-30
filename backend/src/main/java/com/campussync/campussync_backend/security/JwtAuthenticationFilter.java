@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.campussync.campussync_backend.entity.User;
+import com.campussync.campussync_backend.enums.UserStatus;
 import com.campussync.campussync_backend.repository.UserRepository;
 import com.campussync.campussync_backend.service.JwtService;
 
@@ -63,8 +64,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             System.out.println("JWT Email : " + email);
 
-            if (email != null &&
-                    SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (email != null
+                    && SecurityContextHolder.getContext()
+                            .getAuthentication() == null) {
 
                 User user = userRepository.findByEmail(email)
                         .orElse(null);
@@ -72,35 +74,63 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (user == null) {
 
                     System.out.println("User NOT Found");
-                }
-                else {
 
-                    System.out.println("User Found : " + user.getEmail());
+                } else {
+
+                    System.out.println(
+                            "User Found : " + user.getEmail()
+                    );
 
                     boolean valid =
-                            jwtService.isTokenValid(token, user.getEmail());
+                            jwtService.isTokenValid(
+                                    token,
+                                    user.getEmail()
+                            );
 
-                    System.out.println("Token Valid : " + valid);
+                    System.out.println(
+                            "Token Valid : " + valid
+                    );
 
                     if (valid) {
 
-                        System.out.println("Role : " + user.getRole());
+                        System.out.println(
+                                "Role : " + user.getRole()
+                        );
 
-                        UsernamePasswordAuthenticationToken authentication =
-                                new UsernamePasswordAuthenticationToken(
-                                        user,
-                                        null,
-                                        List.of(
-                                                new SimpleGrantedAuthority(
-                                                        "ROLE_" + user.getRole().name()
-                                                )
-                                        )
-                                );
+                        System.out.println(
+                                "Account Status : " + user.getStatus()
+                        );
 
-                        SecurityContextHolder.getContext()
-                                .setAuthentication(authentication);
+                        if (user.getStatus() != UserStatus.ACTIVE) {
 
-                        System.out.println("Authentication Added Successfully");
+                            System.out.println(
+                                    "Account is not active. "
+                                    + "Authentication rejected."
+                            );
+
+                        } else {
+
+                            UsernamePasswordAuthenticationToken authentication =
+                                    new UsernamePasswordAuthenticationToken(
+                                            user,
+                                            null,
+                                            List.of(
+                                                    new SimpleGrantedAuthority(
+                                                            "ROLE_"
+                                                                    + user.getRole()
+                                                                            .name()
+                                                    )
+                                            )
+                                    );
+
+                            SecurityContextHolder
+                                    .getContext()
+                                    .setAuthentication(authentication);
+
+                            System.out.println(
+                                    "Authentication Added Successfully"
+                            );
+                        }
                     }
                 }
             }
@@ -108,11 +138,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (Exception e) {
 
             System.out.println("JWT Exception");
-
             e.printStackTrace();
         }
 
-        System.out.println("============================================\n");
+        System.out.println(
+                "============================================\n"
+        );
 
         filterChain.doFilter(request, response);
     }
