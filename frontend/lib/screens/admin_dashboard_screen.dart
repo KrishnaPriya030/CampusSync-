@@ -114,29 +114,12 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 
   // ============================================================
-  // ORGANIZER ACTIVATION
-  // ============================================================
-
-  void _openOrganizerActivation(
-    BuildContext context,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            const AdminOrganizersScreen(),
-      ),
-    );
-  }
-
-  // ============================================================
   // BUILD
   // ============================================================
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
-
     final bool compact = width < 380;
 
     return Scaffold(
@@ -288,7 +271,6 @@ class AdminDashboardScreen extends StatelessWidget {
 
                         const SizedBox(width: 8),
 
-                        // LOGOUT BUTTON
                         IconButton(
                           tooltip: 'Logout',
                           onPressed: () {
@@ -335,10 +317,6 @@ class AdminDashboardScreen extends StatelessWidget {
 
                     // ==================================================
                     // STATISTICS
-                    //
-                    // IMPORTANT:
-                    // No vertical Spacer / oversized Column here.
-                    // This prevents the previous 7.1px overflow.
                     // ==================================================
 
                     GridView.count(
@@ -429,22 +407,6 @@ class AdminDashboardScreen extends StatelessWidget {
                             builder: (_) =>
                                 const AdminOrganizersScreen(),
                           ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // ORGANIZER ACTIVATION
-                    _ManagementCard(
-                      icon:
-                          Icons.person_add_alt_1_rounded,
-                      title: 'Organizer Activation',
-                      subtitle:
-                          'Review and activate organizer accounts',
-                      onTap: () {
-                        _openOrganizerActivation(
-                          context,
                         );
                       },
                     ),
@@ -616,21 +578,17 @@ class AdminDashboardScreen extends StatelessWidget {
   // ============================================================
 
   String _initials(String name) {
-    final trimmed =
-        name.trim();
+    final trimmed = name.trim();
 
     if (trimmed.isEmpty) {
       return 'A';
     }
 
     final parts =
-        trimmed.split(
-      RegExp(r'\s+'),
-    );
+        trimmed.split(RegExp(r'\s+'));
 
     if (parts.length == 1) {
-      return parts.first[0]
-          .toUpperCase();
+      return parts.first[0].toUpperCase();
     }
 
     return '${parts.first[0]}${parts.last[0]}'
@@ -658,8 +616,7 @@ class _StatCard extends StatelessWidget {
     final width =
         MediaQuery.sizeOf(context).width;
 
-    final bool compact =
-        width < 380;
+    final bool compact = width < 380;
 
     return ClipRRect(
       borderRadius:
@@ -681,9 +638,7 @@ class _StatCard extends StatelessWidget {
             color: Colors.white
                 .withOpacity(0.06),
             borderRadius:
-                BorderRadius.circular(
-              18,
-            ),
+                BorderRadius.circular(18),
             border: Border.all(
               color: Colors.white
                   .withOpacity(0.10),
@@ -705,9 +660,7 @@ class _StatCard extends StatelessWidget {
                     0xFF8B5CF6,
                   ).withOpacity(0.12),
                   borderRadius:
-                      BorderRadius.circular(
-                    9,
-                  ),
+                      BorderRadius.circular(9),
                 ),
                 child: Icon(
                   icon,
@@ -747,9 +700,7 @@ class _StatCard extends StatelessWidget {
                         height: 1.0,
                       ),
                     ),
-                    const SizedBox(
-                      height: 3,
-                    ),
+                    const SizedBox(height: 3),
                     Text(
                       title,
                       maxLines: 1,
@@ -757,9 +708,7 @@ class _StatCard extends StatelessWidget {
                           TextOverflow.ellipsis,
                       style: TextStyle(
                         color: Colors.white
-                            .withOpacity(
-                          0.45,
-                        ),
+                            .withOpacity(0.45),
                         fontSize:
                             compact ? 9 : 10,
                         height: 1.0,
@@ -780,8 +729,7 @@ class _StatCard extends StatelessWidget {
 // MANAGEMENT CARD
 // ================================================================
 
-class _ManagementCard
-    extends StatelessWidget {
+class _ManagementCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
@@ -819,9 +767,7 @@ class _ManagementCard
                 color: Colors.white
                     .withOpacity(0.06),
                 borderRadius:
-                    BorderRadius.circular(
-                  20,
-                ),
+                    BorderRadius.circular(20),
                 border: Border.all(
                   color: Colors.white
                       .withOpacity(0.10),
@@ -841,9 +787,7 @@ class _ManagementCard
                         0xFF8B5CF6,
                       ).withOpacity(0.12),
                       borderRadius:
-                          BorderRadius.circular(
-                        13,
-                      ),
+                          BorderRadius.circular(13),
                     ),
                     child: Icon(
                       icon,
@@ -855,9 +799,7 @@ class _ManagementCard
                     ),
                   ),
 
-                  const SizedBox(
-                    width: 12,
-                  ),
+                  const SizedBox(width: 12),
 
                   Expanded(
                     child: Column(
@@ -880,20 +822,15 @@ class _ManagementCard
                                 FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(
-                          height: 4,
-                        ),
+                        const SizedBox(height: 4),
                         Text(
                           subtitle,
                           maxLines: 2,
                           overflow:
                               TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Colors
-                                .white
-                                .withOpacity(
-                              0.45,
-                            ),
+                            color: Colors.white
+                                .withOpacity(0.45),
                             fontSize: 11,
                             height: 1.25,
                           ),
@@ -902,13 +839,10 @@ class _ManagementCard
                     ),
                   ),
 
-                  const SizedBox(
-                    width: 8,
-                  ),
+                  const SizedBox(width: 8),
 
                   Icon(
-                    Icons
-                        .arrow_forward_ios_rounded,
+                    Icons.arrow_forward_ios_rounded,
                     color: Colors.white
                         .withOpacity(0.35),
                     size: 14,
@@ -927,8 +861,7 @@ class _ManagementCard
 // ADMIN INFO ROW
 // ================================================================
 
-class _AdminInfoRow
-    extends StatelessWidget {
+class _AdminInfoRow extends StatelessWidget {
   final String label;
   final String value;
 
@@ -938,9 +871,7 @@ class _AdminInfoRow
   });
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment:
           CrossAxisAlignment.start,
