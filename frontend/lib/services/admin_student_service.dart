@@ -12,8 +12,7 @@ import '../models/update_student_request.dart';
 import '../models/bulk_student_import_response.dart';
 
 class AdminStudentService {
-  static const String baseUrl = 'http://localhost:8080';
-
+ static const String baseUrl = 'http://127.0.0.1:8080';
   // ============================================================
   // JSON HEADERS
   // ============================================================

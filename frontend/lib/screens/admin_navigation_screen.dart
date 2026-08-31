@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
+import '../storage/token_storage.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_organizations_screen.dart';
 import 'admin_organizers_screen.dart';
 import 'admin_students_screen.dart';
+import 'admin_platform_administration_screen.dart';
+import 'login_screen.dart';
 
 class AdminNavigationScreen extends StatefulWidget {
   final UserProfile user;
@@ -22,7 +25,6 @@ class AdminNavigationScreen extends StatefulWidget {
 class _AdminNavigationScreenState
     extends State<AdminNavigationScreen> {
   int _selectedIndex = 0;
-  int _previousIndex = 0;
 
   late final List<Widget> _screens;
 
@@ -31,209 +33,346 @@ class _AdminNavigationScreenState
     super.initState();
 
     _screens = [
-      // 0 - Dashboard
       AdminDashboardScreen(
         user: widget.user,
       ),
 
-      // 1 - Organizations
       const AdminOrganizationsScreen(),
 
-      // 2 - Organizers
       const AdminOrganizersScreen(),
 
-      // 3 - Students
       const AdminStudentsScreen(),
 
-      // 4 - Profile
+      const AdminPlatformAdministrationScreen(),
+
       _AdminProfileScreen(
         user: widget.user,
+        onLogout: _logout,
       ),
     ];
   }
 
   void _changePage(int index) {
-    if (index == _selectedIndex) {
+    if (index < 0 || index >= _screens.length) {
       return;
     }
 
     setState(() {
-      _previousIndex = _selectedIndex;
       _selectedIndex = index;
     });
+
+    Navigator.of(context).maybePop();
+  }
+
+  Future<void> _logout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text(
+            'Are you sure you want to logout?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, false);
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext, true);
+              },
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true) {
+      return;
+    }
+
+    await TokenStorage().clearToken();
+
+    if (!mounted) {
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+      (route) => false,
+    );
+  }
+
+  String get _currentTitle {
+    switch (_selectedIndex) {
+      case 0:
+        return 'Admin Dashboard';
+
+      case 1:
+        return 'Organizations';
+
+      case 2:
+        return 'Organizers';
+
+      case 3:
+        return 'Students';
+
+      case 4:
+        return 'Platform Administration';
+
+      case 5:
+        return 'Admin Profile';
+
+      default:
+        return 'Admin';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool movingForward =
-        _selectedIndex > _previousIndex;
-
     return Scaffold(
       backgroundColor: const Color(0xFF060917),
 
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        reverseDuration: const Duration(milliseconds: 250),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        transitionBuilder: (
-          Widget child,
-          Animation<double> animation,
-        ) {
-          final Offset beginOffset = movingForward
-              ? const Offset(1.0, 0.0)
-              : const Offset(-1.0, 0.0);
-
-          return ClipRect(
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: beginOffset,
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(
-                opacity: animation,
-                child: child,
-              ),
-            ),
-          );
-        },
-        child: KeyedSubtree(
-          key: ValueKey<int>(_selectedIndex),
-          child: _screens[_selectedIndex],
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0B1024),
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          _currentTitle,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
 
-      bottomNavigationBar: _buildBottomNavigation(),
+      drawer: _buildDrawer(),
+
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
     );
   }
 
-  Widget _buildBottomNavigation() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1024),
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withOpacity(0.08),
-          ),
+  Widget _buildDrawer() {
+    return Drawer(
+      backgroundColor: const Color(0xFF0B1024),
+      child: SafeArea(
+        child: Column(
+          children: [
+            _buildDrawerHeader(),
+
+            const SizedBox(height: 10),
+
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                ),
+                children: [
+                  _drawerItem(
+                    index: 0,
+                    icon: Icons.dashboard_rounded,
+                    title: 'Dashboard',
+                  ),
+
+                  _drawerItem(
+                    index: 1,
+                    icon: Icons.business_rounded,
+                    title: 'Organizations',
+                  ),
+
+                  _drawerItem(
+                    index: 2,
+                    icon: Icons.groups_rounded,
+                    title: 'Organizers',
+                  ),
+
+                  _drawerItem(
+                    index: 3,
+                    icon: Icons.school_rounded,
+                    title: 'Students',
+                  ),
+
+                  _drawerItem(
+                    index: 4,
+                    icon: Icons.admin_panel_settings_rounded,
+                    title: 'Platform Administration',
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Divider(
+                    color: Colors.white.withOpacity(0.10),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _drawerItem(
+                    index: 5,
+                    icon: Icons.person_rounded,
+                    title: 'Profile',
+                  ),
+                ],
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                  ),
+                  label: const Text('Logout'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: BorderSide(
+                      color: Colors.redAccent.withOpacity(0.35),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        24,
+        20,
+        22,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF8B5CF6).withOpacity(0.20),
+            const Color(0xFF3B82F6).withOpacity(0.10),
+          ],
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF8B5CF6)
+                  .withOpacity(0.16),
+              border: Border.all(
+                color: const Color(0xFF8B5CF6)
+                    .withOpacity(0.25),
+              ),
+            ),
+            child: const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: Color(0xFFC4B5FD),
+              size: 28,
+            ),
+          ),
+
+          const SizedBox(width: 14),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.user.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  widget.user.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.50),
+                    fontSize: 12,
+                  ),
+                ),
+
+                const SizedBox(height: 5),
+
+                Text(
+                  widget.user.role.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFFC4B5FD),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 8,
-          ),
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.dashboard_rounded,
-                label: 'Dashboard',
-                selected: _selectedIndex == 0,
-                onTap: () => _changePage(0),
-              ),
-
-              _NavItem(
-                icon: Icons.business_rounded,
-                label: 'Organizations',
-                selected: _selectedIndex == 1,
-                onTap: () => _changePage(1),
-              ),
-
-              _NavItem(
-                icon: Icons.groups_rounded,
-                label: 'Organizers',
-                selected: _selectedIndex == 2,
-                onTap: () => _changePage(2),
-              ),
-
-              _NavItem(
-                icon: Icons.school_rounded,
-                label: 'Students',
-                selected: _selectedIndex == 3,
-                onTap: () => _changePage(3),
-              ),
-
-              _NavItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                selected: _selectedIndex == 4,
-                onTap: () => _changePage(4),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
-}
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
+  Widget _drawerItem({
+    required int index,
+    required IconData icon,
+    required String title,
+  }) {
+    final selected = _selectedIndex == index;
 
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOutCubic,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 7),
-          decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: ListTile(
+        onTap: () => _changePage(index),
+        selected: selected,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        selectedTileColor:
+            const Color(0xFF8B5CF6).withOpacity(0.14),
+        leading: Icon(
+          icon,
+          color: selected
+              ? const Color(0xFFC4B5FD)
+              : Colors.white.withOpacity(0.50),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
             color: selected
-                ? const Color(0xFF8B5CF6).withOpacity(0.13)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedScale(
-                scale: selected ? 1.08 : 1.0,
-                duration: const Duration(milliseconds: 250),
-                child: Icon(
-                  icon,
-                  size: 23,
-                  color: selected
-                      ? const Color(0xFFC4B5FD)
-                      : Colors.white.withOpacity(0.40),
-                ),
-              ),
-              const SizedBox(height: 4),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: TextStyle(
-                  color: selected
-                      ? const Color(0xFFC4B5FD)
-                      : Colors.white.withOpacity(0.40),
-                  fontSize: 10,
-                  fontWeight: selected
-                      ? FontWeight.w600
-                      : FontWeight.w400,
-                ),
-                child: Text(label),
-              ),
-            ],
+                ? Colors.white
+                : Colors.white.withOpacity(0.70),
+            fontSize: 14,
+            fontWeight: selected
+                ? FontWeight.w600
+                : FontWeight.w400,
           ),
         ),
       ),
@@ -243,9 +382,11 @@ class _NavItem extends StatelessWidget {
 
 class _AdminProfileScreen extends StatelessWidget {
   final UserProfile user;
+  final VoidCallback onLogout;
 
   const _AdminProfileScreen({
     required this.user,
+    required this.onLogout,
   });
 
   @override
@@ -263,86 +404,101 @@ class _AdminProfileScreen extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
+        child: ListView(
+          padding: const EdgeInsets.all(24),
+          children: [
+            const SizedBox(height: 30),
+
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF8B5CF6)
+                      .withOpacity(0.14),
+                  border: Border.all(
                     color: const Color(0xFF8B5CF6)
-                        .withOpacity(0.14),
-                    border: Border.all(
-                      color: const Color(0xFF8B5CF6)
-                          .withOpacity(0.25),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF8B5CF6)
-                            .withOpacity(0.18),
-                        blurRadius: 25,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    color: Color(0xFFC4B5FD),
-                    size: 48,
+                        .withOpacity(0.25),
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                Text(
-                  user.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: const Icon(
+                  Icons.person_rounded,
+                  color: Color(0xFFC4B5FD),
+                  size: 48,
                 ),
-
-                const SizedBox(height: 8),
-
-                Text(
-                  user.email,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.50),
-                    fontSize: 14,
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6)
-                        .withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    user.role.toUpperCase(),
-                    style: const TextStyle(
-                      color: Color(0xFFC4B5FD),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              user.name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 26,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              user.email,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.50),
+                fontSize: 14,
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6)
+                      .withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  user.role.toUpperCase(),
+                  style: const TextStyle(
+                    color: Color(0xFFC4B5FD),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 40),
+
+            SizedBox(
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: onLogout,
+                icon: const Icon(
+                  Icons.logout_rounded,
+                ),
+                label: const Text(
+                  'Logout',
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.redAccent,
+                  side: BorderSide(
+                    color: Colors.redAccent.withOpacity(0.35),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
