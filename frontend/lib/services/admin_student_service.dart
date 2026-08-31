@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-
+import '../config/api_config.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/student.dart';
@@ -12,7 +12,7 @@ import '../models/update_student_request.dart';
 import '../models/bulk_student_import_response.dart';
 
 class AdminStudentService {
- static const String baseUrl = 'http://127.0.0.1:8080';
+
   // ============================================================
   // JSON HEADERS
   // ============================================================
@@ -34,7 +34,7 @@ class AdminStudentService {
     String token,
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/admin/students'),
+      Uri.parse('$ApiConfig.baseUrl/api/admin/students'),
       headers: _headers(token),
       body: jsonEncode(request.toJson()),
     );
@@ -68,7 +68,7 @@ class AdminStudentService {
     String token,
   ) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/admin/students'),
+      Uri.parse('$ApiConfig.baseUrl/api/admin/students'),
       headers: _headers(token),
     );
 
@@ -107,7 +107,7 @@ class AdminStudentService {
   ) async {
     final response = await http.get(
       Uri.parse(
-        '$baseUrl/api/admin/students/$id',
+        '$ApiConfig.baseUrl/api/admin/students/$id',
       ),
       headers: _headers(token),
     );
@@ -142,7 +142,7 @@ class AdminStudentService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/students/$id',
+        '$ApiConfig.baseUrl/api/admin/students/$id',
       ),
       headers: _headers(token),
       body: jsonEncode(request.toJson()),
@@ -177,7 +177,7 @@ class AdminStudentService {
   ) async {
     final response = await http.get(
       Uri.parse(
-        '$baseUrl/api/admin/academic/departments',
+        '$ApiConfig.baseUrl/api/admin/academic/departments',
       ),
       headers: _headers(token),
     );
@@ -216,7 +216,7 @@ class AdminStudentService {
     String token,
   ) async {
     final uri = Uri.parse(
-      '$baseUrl/api/admin/academic/branches',
+      '$ApiConfig.baseUrl/api/admin/academic/branches',
     ).replace(
       queryParameters: {
         'departmentId': departmentId.toString(),
@@ -263,7 +263,7 @@ class AdminStudentService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/students/$id/activate',
+        '$ApiConfig.baseUrl/api/admin/students/$id/activate',
       ),
       headers: _headers(token),
     );
@@ -297,7 +297,7 @@ class AdminStudentService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/students/$id/deactivate',
+        '$ApiConfig.baseUrl/api/admin/students/$id/deactivate',
       ),
       headers: _headers(token),
     );
@@ -338,7 +338,7 @@ class AdminStudentService {
     final request = http.MultipartRequest(
       'POST',
       Uri.parse(
-        '$baseUrl/api/admin/students/import',
+        '$ApiConfig.baseUrl/api/admin/students/import',
       ),
     );
 

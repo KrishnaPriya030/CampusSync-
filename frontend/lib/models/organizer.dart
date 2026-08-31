@@ -8,6 +8,7 @@ class Organizer {
   final String organizationName;
   final String designation;
   final String accountStatus;
+  final bool firstLogin;
 
   const Organizer({
     required this.id,
@@ -19,6 +20,7 @@ class Organizer {
     required this.organizationName,
     required this.designation,
     required this.accountStatus,
+    required this.firstLogin,
   });
 
   factory Organizer.fromJson(
@@ -39,6 +41,7 @@ class Organizer {
           json['designation']?.toString() ?? '',
       accountStatus:
           json['accountStatus']?.toString() ?? '',
+      firstLogin: json['firstLogin'] == true,
     );
   }
 
@@ -52,6 +55,7 @@ class Organizer {
     String? organizationName,
     String? designation,
     String? accountStatus,
+    bool? firstLogin,
   }) {
     return Organizer(
       id: id ?? this.id,
@@ -67,6 +71,7 @@ class Organizer {
           designation ?? this.designation,
       accountStatus:
           accountStatus ?? this.accountStatus,
+      firstLogin: firstLogin ?? this.firstLogin,
     );
   }
 }

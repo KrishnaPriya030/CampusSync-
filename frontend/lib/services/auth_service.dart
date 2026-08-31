@@ -5,10 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/login_response.dart';
 import '../models/user_profile.dart';
+import '../config/api_config.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://127.0.0.1:8080';
-
+  
   // ============================================================
   // LOGIN
   // ============================================================
@@ -17,7 +17,7 @@ class AuthService {
     String email,
     String password,
   ) async {
-    final url = Uri.parse('$baseUrl/api/auth/login');
+    final url = Uri.parse('$ApiConfig.baseUrl/api/auth/login');
 
     final response = await http.post(
       url,
@@ -49,7 +49,7 @@ class AuthService {
   Future<UserProfile> getCurrentUser(
     String token,
   ) async {
-    final url = Uri.parse('$baseUrl/api/users/me');
+    final url = Uri.parse('$ApiConfig.baseUrl/api/users/me');
 
     final response = await http.get(
       url,
@@ -82,7 +82,7 @@ class AuthService {
     String token,
   ) async {
     final url =
-        Uri.parse('$baseUrl/api/users/change-password');
+        Uri.parse('$ApiConfig.baseUrl/api/users/change-password');
 
     final response = await http.put(
       url,

@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
 import '../models/organization.dart';
 
 class AdminOrganizationService {
-  static const String baseUrl =
-      'http://127.0.0.1:8080';
+  
 
   Map<String, String> _headers(String token) {
     return {
@@ -24,7 +24,7 @@ class AdminOrganizationService {
     String token,
   ) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/admin/organizations'),
+      Uri.parse('$ApiConfig.baseUrl/api/admin/organizations'),
       headers: _headers(token),
     );
 
@@ -64,7 +64,7 @@ class AdminOrganizationService {
   ) async {
     final response = await http.get(
       Uri.parse(
-        '$baseUrl/api/admin/organizations/$id',
+        '$ApiConfig.baseUrl/api/admin/organizations/$id',
       ),
       headers: _headers(token),
     );
@@ -98,7 +98,7 @@ class AdminOrganizationService {
     String token,
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/admin/organizations'),
+      Uri.parse('$ApiConfig.baseUrl/api/admin/organizations'),
       headers: _headers(token),
       body: jsonEncode(request),
     );
@@ -135,7 +135,7 @@ class AdminOrganizationService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/organizations/$id',
+        '$ApiConfig.baseUrl/api/admin/organizations/$id',
       ),
       headers: _headers(token),
       body: jsonEncode(request),
@@ -171,7 +171,7 @@ class AdminOrganizationService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/organizations/$id/activate',
+        '$ApiConfig.baseUrl/api/admin/organizations/$id/activate',
       ),
       headers: _headers(token),
     );
@@ -206,7 +206,7 @@ class AdminOrganizationService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/organizations/$id/deactivate',
+        '$ApiConfig.baseUrl/api/admin/organizations/$id/deactivate',
       ),
       headers: _headers(token),
     );

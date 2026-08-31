@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import '../config/api_config.dart';
 
 import '../models/organizer.dart';
 import '../models/activate_organizer_request.dart';
+import '../config/api_config.dart';
 
 class CreateOrganizerRequest {
   final String name;
@@ -70,9 +72,7 @@ class CreateOrganizerResponse {
 }
 
 class AdminOrganizerService {
-  static const String baseUrl =
-      'http://127.0.0.1:8080';
-
+  
   // ============================================================
   // JSON HEADERS
   // ============================================================
@@ -94,7 +94,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.get(
       Uri.parse(
-        '$baseUrl/api/admin/organizers',
+        '$ApiConfig.baseUrl/api/admin/organizers',
       ),
       headers: _headers(token),
     );
@@ -135,7 +135,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.get(
       Uri.parse(
-        '$baseUrl/api/admin/organizers/$id',
+        '$ApiConfig.baseUrl/api/admin/organizers/$id',
       ),
       headers: _headers(token),
     );
@@ -170,7 +170,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.post(
       Uri.parse(
-        '$baseUrl/api/admin/organizers',
+        '$ApiConfig.baseUrl/api/admin/organizers',
       ),
       headers: _headers(token),
       body: jsonEncode(
@@ -211,7 +211,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/organizers/$id/activate',
+        '$ApiConfig.baseUrl/api/admin/organizers/$id/activate',
       ),
       headers: _headers(token),
     );
@@ -246,7 +246,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.put(
       Uri.parse(
-        '$baseUrl/api/admin/organizers/$id/block',
+        '$ApiConfig.baseUrl/api/admin/organizers/$id/block',
       ),
       headers: _headers(token),
     );
@@ -288,7 +288,7 @@ class AdminOrganizerService {
   ) async {
     final response = await http.post(
       Uri.parse(
-        '$baseUrl/api/auth/organizer/activate',
+        '$ApiConfig.baseUrl/api/auth/organizer/activate',
       ),
       headers: const {
         'Content-Type': 'application/json',

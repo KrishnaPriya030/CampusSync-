@@ -2,14 +2,18 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../models/organization.dart';
+import '../models/organizer.dart';
 import '../models/user_profile.dart';
+import '../services/admin_organization_service.dart';
+import '../services/admin_organizer_service.dart';
 import '../storage/token_storage.dart';
 import 'admin_organizations_screen.dart';
 import 'admin_organizers_screen.dart';
 import 'admin_students_screen.dart';
 import 'login_screen.dart';
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   final UserProfile user;
 
   const AdminDashboardScreen({
@@ -17,14 +21,102 @@ class AdminDashboardScreen extends StatelessWidget {
     required this.user,
   });
 
+  @override
+  State<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState
+    extends State<AdminDashboardScreen> {
+  final TokenStorage _tokenStorage = TokenStorage();
+  final AdminOrganizationService _organizationService =
+      AdminOrganizationService();
+  final AdminOrganizerService _organizerService =
+      AdminOrganizerService();
+
+  bool _loadingStats = true;
+  String? _statsError;
+
+  int _organizationCount = 0;
+  int _organizerCount = 0;
+  int _activeOrganizerCount = 0;
+  int _pendingOrganizerCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardStats();
+  }
+
+  // ============================================================
+  // LOAD DASHBOARD STATISTICS
+  // ============================================================
+
+  Future<void> _loadDashboardStats() async {
+    setState(() {
+      _loadingStats = true;
+      _statsError = null;
+    });
+
+    try {
+      final token = await _tokenStorage.getToken();
+
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token not found');
+      }
+
+      final results = await Future.wait([
+        _organizationService.getAllOrganizations(token),
+        _organizerService.getAllOrganizers(token),
+      ]);
+
+      final organizations =
+          results[0] as List<Organization>;
+
+      final organizers =
+          results[1] as List<Organizer>;
+
+      final activeOrganizers = organizers.where(
+        (organizer) =>
+            organizer.accountStatus.toUpperCase() ==
+                'ACTIVE' &&
+            !organizer.firstLogin,
+      );
+
+      final pendingOrganizers = organizers.where(
+        (organizer) =>
+            organizer.accountStatus.toUpperCase() ==
+                'ACTIVE' &&
+            organizer.firstLogin,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _organizationCount = organizations.length;
+        _organizerCount = organizers.length;
+        _activeOrganizerCount =
+            activeOrganizers.length;
+        _pendingOrganizerCount =
+            pendingOrganizers.length;
+        _loadingStats = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loadingStats = false;
+        _statsError = e.toString();
+      });
+    }
+  }
+
   // ============================================================
   // LOGOUT
   // ============================================================
 
   Future<void> _logout(BuildContext context) async {
-    final tokenStorage = TokenStorage();
-
-    await tokenStorage.clearToken();
+    await _tokenStorage.clearToken();
 
     if (!context.mounted) return;
 
@@ -77,17 +169,17 @@ class AdminDashboardScreen extends StatelessWidget {
             children: [
               _AdminInfoRow(
                 label: 'Administrator',
-                value: user.name,
+                value: widget.user.name,
               ),
               const SizedBox(height: 12),
               _AdminInfoRow(
                 label: 'Email',
-                value: user.email,
+                value: widget.user.email,
               ),
               const SizedBox(height: 12),
               _AdminInfoRow(
                 label: 'Role',
-                value: user.role,
+                value: widget.user.role,
               ),
               const SizedBox(height: 18),
               Text(
@@ -139,10 +231,6 @@ class AdminDashboardScreen extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              // ==================================================
-              // BACKGROUND DECORATION
-              // ==================================================
-
               Positioned(
                 top: -100,
                 right: -80,
@@ -156,7 +244,6 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
               Positioned(
                 bottom: -120,
                 left: -100,
@@ -170,11 +257,6 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              // ==================================================
-              // CONTENT
-              // ==================================================
-
               SingleChildScrollView(
                 padding: EdgeInsets.fromLTRB(
                   compact ? 14 : 20,
@@ -186,10 +268,6 @@ class AdminDashboardScreen extends StatelessWidget {
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
                   children: [
-                    // ==================================================
-                    // HEADER
-                    // ==================================================
-
                     Row(
                       crossAxisAlignment:
                           CrossAxisAlignment.center,
@@ -208,7 +286,7 @@ class AdminDashboardScreen extends StatelessWidget {
                           ),
                           child: Center(
                             child: Text(
-                              _initials(user.name),
+                              _initials(widget.user.name),
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize:
@@ -219,15 +297,11 @@ class AdminDashboardScreen extends StatelessWidget {
                             ),
                           ),
                         ),
-
                         SizedBox(
                           width: compact ? 10 : 14,
                         ),
-
                         Expanded(
                           child: Column(
-                            mainAxisSize:
-                                MainAxisSize.min,
                             crossAxisAlignment:
                                 CrossAxisAlignment.start,
                             children: [
@@ -242,7 +316,7 @@ class AdminDashboardScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                user.name,
+                                widget.user.name,
                                 maxLines: 1,
                                 overflow:
                                     TextOverflow.ellipsis,
@@ -256,7 +330,7 @@ class AdminDashboardScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                user.email,
+                                widget.user.email,
                                 maxLines: 1,
                                 overflow:
                                     TextOverflow.ellipsis,
@@ -268,9 +342,7 @@ class AdminDashboardScreen extends StatelessWidget {
                             ],
                           ),
                         ),
-
                         const SizedBox(width: 8),
-
                         IconButton(
                           tooltip: 'Logout',
                           onPressed: () {
@@ -287,10 +359,6 @@ class AdminDashboardScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 24),
-
-                    // ==================================================
-                    // TITLE
-                    // ==================================================
 
                     Text(
                       'Admin Dashboard',
@@ -328,39 +396,67 @@ class AdminDashboardScreen extends StatelessWidget {
                           const NeverScrollableScrollPhysics(),
                       childAspectRatio:
                           compact ? 1.75 : 1.65,
-                      children: const [
+                      children: [
                         _StatCard(
                           title: 'Organizations',
-                          value: '0',
+                          value: _loadingStats
+                              ? '...'
+                              : '$_organizationCount',
                           icon:
                               Icons.business_rounded,
                         ),
                         _StatCard(
                           title: 'Organizers',
-                          value: '0',
+                          value: _loadingStats
+                              ? '...'
+                              : '$_organizerCount',
                           icon:
                               Icons.groups_rounded,
                         ),
                         _StatCard(
                           title: 'Active',
-                          value: '0',
+                          value: _loadingStats
+                              ? '...'
+                              : '$_activeOrganizerCount',
                           icon:
                               Icons.check_circle_rounded,
                         ),
                         _StatCard(
                           title: 'Pending',
-                          value: '0',
+                          value: _loadingStats
+                              ? '...'
+                              : '$_pendingOrganizerCount',
                           icon:
                               Icons.pending_actions_rounded,
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 26),
+                    if (_statsError != null) ...[
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Unable to load dashboard statistics.',
+                              style: TextStyle(
+                                color: Colors.white
+                                    .withOpacity(0.55),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed:
+                                _loadDashboardStats,
+                            child:
+                                const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ],
 
-                    // ==================================================
-                    // MANAGEMENT
-                    // ==================================================
+                    const SizedBox(height: 26),
 
                     const Text(
                       'Management',
@@ -373,47 +469,48 @@ class AdminDashboardScreen extends StatelessWidget {
 
                     const SizedBox(height: 14),
 
-                    // ORGANIZATIONS
                     _ManagementCard(
                       icon:
                           Icons.business_rounded,
                       title: 'Organizations',
                       subtitle:
                           'Create and manage organizations',
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
                                 const AdminOrganizationsScreen(),
                           ),
                         );
+
+                        _loadDashboardStats();
                       },
                     ),
 
                     const SizedBox(height: 12),
 
-                    // ORGANIZERS
                     _ManagementCard(
                       icon:
                           Icons.manage_accounts_rounded,
                       title: 'Organizers',
                       subtitle:
                           'Manage organizer accounts and access',
-                      onTap: () {
-                        Navigator.push(
+                      onTap: () async {
+                        await Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) =>
                                 const AdminOrganizersScreen(),
                           ),
                         );
+
+                        _loadDashboardStats();
                       },
                     ),
 
                     const SizedBox(height: 12),
 
-                    // STUDENTS
                     _ManagementCard(
                       icon:
                           Icons.school_rounded,
@@ -433,7 +530,6 @@ class AdminDashboardScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // PLATFORM ADMINISTRATION
                     _ManagementCard(
                       icon:
                           Icons.admin_panel_settings_rounded,
@@ -449,10 +545,6 @@ class AdminDashboardScreen extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 22),
-
-                    // ==================================================
-                    // LOGOUT BUTTON
-                    // ==================================================
 
                     SizedBox(
                       width: double.infinity,
@@ -507,15 +599,13 @@ class AdminDashboardScreen extends StatelessWidget {
   Future<void> _showLogoutConfirmation(
     BuildContext context,
   ) async {
-    final confirmed =
-        await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor:
               const Color(0xFF111827),
-          shape:
-              RoundedRectangleBorder(
+          shape: RoundedRectangleBorder(
             borderRadius:
                 BorderRadius.circular(20),
           ),
@@ -523,15 +613,14 @@ class AdminDashboardScreen extends StatelessWidget {
             'Logout?',
             style: TextStyle(
               color: Colors.white,
-              fontWeight:
-                  FontWeight.w700,
+              fontWeight: FontWeight.w700,
             ),
           ),
           content: Text(
             'Are you sure you want to logout?',
             style: TextStyle(
-              color: Colors.white
-                  .withOpacity(0.65),
+              color:
+                  Colors.white.withOpacity(0.65),
             ),
           ),
           actions: [
@@ -645,8 +734,6 @@ class _StatCard extends StatelessWidget {
             ),
           ),
           child: Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.center,
             children: [
               Container(
                 width:
@@ -672,12 +759,10 @@ class _StatCard extends StatelessWidget {
                       compact ? 16 : 18,
                 ),
               ),
-
               SizedBox(
                 width:
                     compact ? 7 : 9,
               ),
-
               Expanded(
                 child: Column(
                   mainAxisSize:
@@ -774,8 +859,6 @@ class _ManagementCard extends StatelessWidget {
                 ),
               ),
               child: Row(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center,
                 children: [
                   Container(
                     width: 44,
@@ -798,13 +881,9 @@ class _ManagementCard extends StatelessWidget {
                       size: 21,
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
                   Expanded(
                     child: Column(
-                      mainAxisSize:
-                          MainAxisSize.min,
                       crossAxisAlignment:
                           CrossAxisAlignment.start,
                       children: [
@@ -838,9 +917,7 @@ class _ManagementCard extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(width: 8),
-
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     color: Colors.white
