@@ -1,15 +1,17 @@
 package com.campussync.campussync_backend.service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import com.campussync.campussync_backend.dto.UpdateStudentRequest;
-import com.campussync.campussync_backend.dto.StudentListResponse;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.campussync.campussync_backend.dto.BulkStudentImportResponse;
 import com.campussync.campussync_backend.dto.CreateStudentRequest;
 import com.campussync.campussync_backend.dto.CreateStudentResponse;
+import com.campussync.campussync_backend.dto.StudentListResponse;
+import com.campussync.campussync_backend.dto.UpdateStudentRequest;
 import com.campussync.campussync_backend.entity.Branch;
 import com.campussync.campussync_backend.entity.Department;
 import com.campussync.campussync_backend.entity.Student;
@@ -21,7 +23,6 @@ import com.campussync.campussync_backend.repository.BranchRepository;
 import com.campussync.campussync_backend.repository.DepartmentRepository;
 import com.campussync.campussync_backend.repository.StudentRepository;
 import com.campussync.campussync_backend.repository.UserRepository;
-
 
 @Service
 public class StudentManagementService {
@@ -46,14 +47,20 @@ public class StudentManagementService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public CreateStudentResponse createStudent(CreateStudentRequest request) {
+    // ============================================================
+    // CREATE STUDENT
+    // ============================================================
+
+    public CreateStudentResponse createStudent(
+            CreateStudentRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
         String temporaryPassword = request.getDateOfBirth()
-        .format(java.time.format.DateTimeFormatter.ofPattern("ddMMyyyy"));
+                .format(DateTimeFormatter.ofPattern("ddMMyyyy"));
+
         String encodedPassword =
                 passwordEncoder.encode(temporaryPassword);
 
@@ -67,7 +74,7 @@ public class StudentManagementService {
                 .orElseThrow(() ->
                         new RuntimeException("Branch not found"));
 
-        // Make sure the branch belongs to the selected department
+        // Make sure the branch belongs to the selected department.
         if (!branch.getDepartment().getId()
                 .equals(department.getId())) {
 
@@ -96,9 +103,10 @@ public class StudentManagementService {
         student.setDepartment(department);
         student.setBranch(branch);
         student.setProgramme(request.getProgramme());
-student.setAdmissionYear(request.getAdmissionYear());
+        student.setAdmissionYear(request.getAdmissionYear());
         student.setSemester(request.getSemester());
         student.setGraduationYear(request.getGraduationYear());
+
         student.setInternal(true);
         student.setStatus(StudentStatus.ACTIVE);
 
@@ -112,131 +120,147 @@ student.setAdmissionYear(request.getAdmissionYear());
                 temporaryPassword
         );
     }
-   
-public List<StudentListResponse> getAllStudents() {
 
-    return studentRepository.findAll()
-            .stream()
-            .map(student -> new StudentListResponse(
-                    student.getId(),
-                    student.getUser().getName(),
-                    student.getUser().getEmail(),
-                    student.getRegisterNumber(),
-                    student.getDepartment().getId(),
-                    student.getDepartment().getName(),
-                    student.getBranch().getId(),
-                    student.getBranch().getName(),
-                    student.getProgramme(),
-                    student.getAdmissionYear(),
-                    student.getSemester(),
-                    student.getGraduationYear(),
-                    student.isInternal(),
-                    student.getStatus().name(),
-                    student.getUser().getStatus().name()
-            ))
-            .toList();
-}
-public StudentListResponse getStudentById(Long id) {
+    // ============================================================
+    // GET ALL STUDENTS
+    // ============================================================
 
-    Student student = studentRepository.findById(id)
-            .orElseThrow(() ->
-                    new RuntimeException("Student not found"));
+    public List<StudentListResponse> getAllStudents() {
 
-    return new StudentListResponse(
-            student.getId(),
-            student.getUser().getName(),
-            student.getUser().getEmail(),
-            student.getRegisterNumber(),
-            student.getDepartment().getId(),
-            student.getDepartment().getName(),
-            student.getBranch().getId(),
-            student.getBranch().getName(),
-            student.getProgramme(),
-            student.getAdmissionYear(),
-            student.getSemester(),
-            student.getGraduationYear(),
-            student.isInternal(),
-            student.getStatus().name(),
-            student.getUser().getStatus().name()
-    );
-}
-        
-    
-
-public StudentListResponse updateStudent(
-        Long id,
-        UpdateStudentRequest request) {
-
-    Student student = studentRepository.findById(id)
-            .orElseThrow(() ->
-                    new RuntimeException("Student not found"));
-
-    Department department = departmentRepository
-            .findById(request.getDepartmentId())
-            .orElseThrow(() ->
-                    new RuntimeException("Department not found"));
-
-    Branch branch = branchRepository
-            .findById(request.getBranchId())
-            .orElseThrow(() ->
-                    new RuntimeException("Branch not found"));
-
-    if (!branch.getDepartment().getId()
-            .equals(department.getId())) {
-
-        throw new RuntimeException(
-                "Branch does not belong to selected department");
+        return studentRepository.findAll()
+                .stream()
+                .map(this::toStudentListResponse)
+                .toList();
     }
 
-    User user = student.getUser();
+    // ============================================================
+    // GET STUDENT BY ID
+    // ============================================================
 
-    // User details
-    user.setName(request.getName());
-    user.setPhoneNumber(request.getPhoneNumber());
+    public StudentListResponse getStudentById(Long id) {
 
-    // Student academic details
-    student.setProgramme(request.getProgramme());
-    student.setAdmissionYear(request.getAdmissionYear());
-    student.setDepartment(department);
-    student.setBranch(branch);
-    student.setSemester(request.getSemester());
-    student.setGraduationYear(request.getGraduationYear());
-    student.setInternal(request.isInternal());
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
 
-    userRepository.save(user);
-    studentRepository.save(student);
+        return toStudentListResponse(student);
+    }
 
-    return getStudentById(id);
-}
-public StudentListResponse deactivateStudent(Long id) {
+    // ============================================================
+    // UPDATE STUDENT
+    // ============================================================
 
-    Student student = studentRepository.findById(id)
-            .orElseThrow(() ->
-                    new RuntimeException("Student not found"));
+    public StudentListResponse updateStudent(
+            Long id,
+            UpdateStudentRequest request) {
 
-    User user = student.getUser();
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
 
-    user.setStatus(UserStatus.BLOCKED);
+        Department department = departmentRepository
+                .findById(request.getDepartmentId())
+                .orElseThrow(() ->
+                        new RuntimeException("Department not found"));
 
-    userRepository.save(user);
+        Branch branch = branchRepository
+                .findById(request.getBranchId())
+                .orElseThrow(() ->
+                        new RuntimeException("Branch not found"));
 
-    return getStudentById(id);
-}
+        // Make sure the branch belongs to the selected department.
+        if (!branch.getDepartment().getId()
+                .equals(department.getId())) {
 
-public StudentListResponse activateStudent(Long id) {
+            throw new RuntimeException(
+                    "Branch does not belong to selected department");
+        }
 
-    Student student = studentRepository.findById(id)
-            .orElseThrow(() ->
-                    new RuntimeException("Student not found"));
+        User user = student.getUser();
 
-    User user = student.getUser();
+        // User details.
+        user.setName(request.getName());
+        user.setPhoneNumber(request.getPhoneNumber());
 
-    user.setStatus(UserStatus.ACTIVE);
-    student.setStatus(StudentStatus.ACTIVE);
+        // Student academic details.
+        student.setProgramme(request.getProgramme());
+        student.setAdmissionYear(request.getAdmissionYear());
+        student.setDepartment(department);
+        student.setBranch(branch);
+        student.setSemester(request.getSemester());
+        student.setGraduationYear(request.getGraduationYear());
+        student.setInternal(request.isInternal());
 
-    userRepository.save(user);
-    studentRepository.save(student);
+        userRepository.save(user);
+        studentRepository.save(student);
 
-    return getStudentById(id);
-}
+        return getStudentById(id);
+    }
+
+    // ============================================================
+    // DEACTIVATE STUDENT
+    // ============================================================
+
+    public StudentListResponse deactivateStudent(Long id) {
+
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
+
+        User user = student.getUser();
+
+        user.setStatus(UserStatus.BLOCKED);
+
+        userRepository.save(user);
+
+        return getStudentById(id);
+    }
+
+    // ============================================================
+    // ACTIVATE STUDENT
+    // ============================================================
+
+    public StudentListResponse activateStudent(Long id) {
+
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Student not found"));
+
+        User user = student.getUser();
+
+        user.setStatus(UserStatus.ACTIVE);
+        student.setStatus(StudentStatus.ACTIVE);
+
+        userRepository.save(user);
+        studentRepository.save(student);
+
+        return getStudentById(id);
+    }
+
+    // ============================================================
+    // MAP STUDENT ENTITY -> RESPONSE
+    // ============================================================
+
+    private StudentListResponse toStudentListResponse(
+            Student student) {
+
+        return new StudentListResponse(
+                student.getId(),
+                student.getUser().getName(),
+                student.getUser().getEmail(),
+                student.getUser().getPhoneNumber(),
+                student.getRegisterNumber(),
+                student.getDepartment().getId(),
+                student.getDepartment().getName(),
+                student.getBranch().getId(),
+                student.getBranch().getName(),
+                student.getProgramme(),
+                student.getAdmissionYear(),
+                student.getSemester(),
+                student.getGraduationYear(),
+                student.isInternal(),
+                student.getStatus().name(),
+                student.getUser().getStatus().name()
+        );
+    }
 }

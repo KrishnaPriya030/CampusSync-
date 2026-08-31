@@ -8,6 +8,8 @@ public record StudentListResponse(
 
         String email,
 
+        String phoneNumber,
+
         String registerNumber,
 
         Long departmentId,
@@ -33,5 +35,4 @@ public record StudentListResponse(
         String accountStatus
 
 ) {
-
 }
