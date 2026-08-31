@@ -288,8 +288,8 @@ class _AdminStudentsScreenState
     if (_importing) return;
 
     try {
-      final result =
-          await FilePicker.platform.pickFiles(
+      final files =
+          await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
           'xlsx',
@@ -298,13 +298,11 @@ class _AdminStudentsScreenState
         allowMultiple: false,
       );
 
-      if (result == null ||
-          result.files.isEmpty) {
+      if (files.isEmpty) {
         return;
       }
 
-      final selectedFile =
-          result.files.single;
+      final selectedFile = files.first;
 
       if (selectedFile.path == null ||
           selectedFile.path!.isEmpty) {
@@ -354,8 +352,7 @@ class _AdminStudentsScreenState
           File(selectedFile.path!);
 
       final response =
-          await _studentService
-              .importStudents(
+          await _studentService.importStudents(
         file,
         token,
       );
@@ -499,7 +496,6 @@ class _AdminStudentsScreenState
                       response.failed
                           .toString(),
                 ),
-
                 if (response
                     .errors
                     .isNotEmpty) ...[
@@ -685,6 +681,12 @@ class _AdminStudentsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final width =
+        MediaQuery.sizeOf(context).width;
+
+    final bool compact =
+        width < 600;
+
     return Scaffold(
       backgroundColor:
           const Color(0xFF060917),
@@ -725,108 +727,110 @@ class _AdminStudentsScreenState
           child: Column(
             children: [
               // ==================================================
-              // SEARCH + BUTTONS
+              // SEARCH
+              // ==================================================
+
+              TextField(
+                controller:
+                    _searchController,
+                style:
+                    const TextStyle(
+                  color: Colors.white,
+                ),
+                decoration:
+                    InputDecoration(
+                  hintText:
+                      'Search students...',
+                  hintStyle:
+                      TextStyle(
+                    color: Colors.white
+                        .withOpacity(
+                      0.4,
+                    ),
+                  ),
+                  prefixIcon:
+                      const Icon(
+                    Icons
+                        .search_rounded,
+                    color: Color(
+                      0xFFC4B5FD,
+                    ),
+                  ),
+                  suffixIcon:
+                      _searchController
+                              .text
+                              .isNotEmpty
+                          ? IconButton(
+                              onPressed:
+                                  () {
+                                _searchController
+                                    .clear();
+                              },
+                              icon:
+                                  const Icon(
+                                Icons
+                                    .clear_rounded,
+                                color: Colors
+                                    .white54,
+                              ),
+                            )
+                          : null,
+                  filled: true,
+                  fillColor:
+                      Colors.white
+                          .withOpacity(
+                    0.06,
+                  ),
+                  border:
+                      OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius
+                            .circular(
+                      16,
+                    ),
+                    borderSide:
+                        BorderSide.none,
+                  ),
+                ),
+              ),
+
+              const SizedBox(
+                height: 10,
+              ),
+
+              // ==================================================
+              // ACTION BUTTONS
               // ==================================================
 
               Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller:
-                          _searchController,
-                      style:
-                          const TextStyle(
-                        color: Colors.white,
-                      ),
-                      decoration:
-                          InputDecoration(
-                        hintText:
-                            'Search students...',
-                        hintStyle:
-                            TextStyle(
-                          color: Colors.white
-                              .withOpacity(
-                            0.4,
-                          ),
-                        ),
-                        prefixIcon:
-                            const Icon(
-                          Icons
-                              .search_rounded,
-                          color: Color(
-                            0xFFC4B5FD,
-                          ),
-                        ),
-                        suffixIcon:
-                            _searchController
-                                    .text
-                                    .isNotEmpty
-                                ? IconButton(
-                                    onPressed:
-                                        () {
-                                      _searchController
-                                          .clear();
-                                    },
-                                    icon:
-                                        const Icon(
-                                      Icons
-                                          .clear_rounded,
-                                      color: Colors
-                                          .white54,
-                                    ),
-                                  )
-                                : null,
-                        filled: true,
-                        fillColor:
-                            Colors.white
-                                .withOpacity(
-                          0.06,
-                        ),
-                        border:
-                            OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius
-                                  .circular(
-                            16,
-                          ),
-                          borderSide:
-                              BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(
-                    width: 10,
-                  ),
-
-                  // IMPORT BUTTON
-                  SizedBox(
-                    height: 52,
                     child:
-                        OutlinedButton.icon(
+                        OutlinedButton
+                            .icon(
                       onPressed:
                           _importing
                               ? null
                               : _importExcel,
-                      icon: _importing
-                          ? const SizedBox(
-                              width: 17,
-                              height: 17,
-                              child:
-                                  CircularProgressIndicator(
-                                strokeWidth:
-                                    2,
-                                color:
-                                    Color(
-                                  0xFFC4B5FD,
+                      icon:
+                          _importing
+                              ? const SizedBox(
+                                  width: 17,
+                                  height: 17,
+                                  child:
+                                      CircularProgressIndicator(
+                                    strokeWidth:
+                                        2,
+                                    color:
+                                        Color(
+                                      0xFFC4B5FD,
+                                    ),
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons
+                                      .upload_file_rounded,
                                 ),
-                              ),
-                            )
-                          : const Icon(
-                              Icons
-                                  .upload_file_rounded,
-                            ),
                       label: Text(
                         _importing
                             ? 'Importing...'
@@ -864,11 +868,10 @@ class _AdminStudentsScreenState
                     width: 10,
                   ),
 
-                  // ADD BUTTON
-                  SizedBox(
-                    height: 52,
+                  Expanded(
                     child:
-                        ElevatedButton.icon(
+                        ElevatedButton
+                            .icon(
                       onPressed:
                           _importing
                               ? null
@@ -880,7 +883,7 @@ class _AdminStudentsScreenState
                       ),
                       label:
                           const Text(
-                        'Add',
+                        'Add Student',
                       ),
                       style:
                           ElevatedButton
@@ -1335,6 +1338,10 @@ class _StudentCard
                     Text(
                       student
                           .registerNumber,
+                      maxLines: 1,
+                      overflow:
+                          TextOverflow
+                              .ellipsis,
                       style: TextStyle(
                         color: Colors
                             .white
@@ -1346,6 +1353,10 @@ class _StudentCard
                     ),
                   ],
                 ),
+              ),
+
+              const SizedBox(
+                width: 8,
               ),
 
               Container(

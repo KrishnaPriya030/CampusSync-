@@ -31,25 +31,26 @@ class _AdminNavigationScreenState
     super.initState();
 
     _screens = [
+      // 0 - Dashboard
       AdminDashboardScreen(
         user: widget.user,
       ),
 
+      // 1 - Organizations
       const AdminOrganizationsScreen(),
 
+      // 2 - Organizers
       const AdminOrganizersScreen(),
 
-       
+      // 3 - Students
+      const AdminStudentsScreen(),
 
+      // 4 - Profile
       _AdminProfileScreen(
         user: widget.user,
       ),
     ];
   }
-
-  // ================================================================
-  // CHANGE PAGE
-  // ================================================================
 
   void _changePage(int index) {
     if (index == _selectedIndex) {
@@ -62,10 +63,6 @@ class _AdminNavigationScreenState
     });
   }
 
-  // ================================================================
-  // BUILD
-  // ================================================================
-
   @override
   Widget build(BuildContext context) {
     final bool movingForward =
@@ -75,15 +72,10 @@ class _AdminNavigationScreenState
       backgroundColor: const Color(0xFF060917),
 
       body: AnimatedSwitcher(
-        duration: const Duration(
-          milliseconds: 350,
-        ),
-        reverseDuration: const Duration(
-          milliseconds: 250,
-        ),
+        duration: const Duration(milliseconds: 350),
+        reverseDuration: const Duration(milliseconds: 250),
         switchInCurve: Curves.easeOutCubic,
         switchOutCurve: Curves.easeInCubic,
-
         transitionBuilder: (
           Widget child,
           Animation<double> animation,
@@ -105,21 +97,15 @@ class _AdminNavigationScreenState
             ),
           );
         },
-
         child: KeyedSubtree(
           key: ValueKey<int>(_selectedIndex),
           child: _screens[_selectedIndex],
         ),
       ),
 
-      bottomNavigationBar:
-          _buildBottomNavigation(),
+      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
-
-  // ================================================================
-  // BOTTOM NAVIGATION
-  // ================================================================
 
   Widget _buildBottomNavigation() {
     return Container(
@@ -138,7 +124,6 @@ class _AdminNavigationScreenState
           ),
         ],
       ),
-
       child: SafeArea(
         top: false,
         child: Padding(
@@ -148,20 +133,12 @@ class _AdminNavigationScreenState
           ),
           child: Row(
             children: [
-              // ------------------------------------------------
-              // DASHBOARD
-              // ------------------------------------------------
-
               _NavItem(
                 icon: Icons.dashboard_rounded,
                 label: 'Dashboard',
                 selected: _selectedIndex == 0,
                 onTap: () => _changePage(0),
               ),
-
-              // ------------------------------------------------
-              // ORGANIZATIONS
-              // ------------------------------------------------
 
               _NavItem(
                 icon: Icons.business_rounded,
@@ -170,10 +147,6 @@ class _AdminNavigationScreenState
                 onTap: () => _changePage(1),
               ),
 
-              // ------------------------------------------------
-              // ORGANIZERS
-              // ------------------------------------------------
-
               _NavItem(
                 icon: Icons.groups_rounded,
                 label: 'Organizers',
@@ -181,20 +154,12 @@ class _AdminNavigationScreenState
                 onTap: () => _changePage(2),
               ),
 
-              // ------------------------------------------------
-              // STUDENTS
-              // ------------------------------------------------
-
               _NavItem(
                 icon: Icons.school_rounded,
                 label: 'Students',
                 selected: _selectedIndex == 3,
                 onTap: () => _changePage(3),
               ),
-
-              // ------------------------------------------------
-              // PROFILE
-              // ------------------------------------------------
 
               _NavItem(
                 icon: Icons.person_rounded,
@@ -209,10 +174,6 @@ class _AdminNavigationScreenState
     );
   }
 }
-
-// ================================================================
-// NAVIGATION ITEM
-// ================================================================
 
 class _NavItem extends StatelessWidget {
   final IconData icon;
@@ -233,70 +194,43 @@ class _NavItem extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-
         child: AnimatedContainer(
-          duration: const Duration(
-            milliseconds: 250,
-          ),
+          duration: const Duration(milliseconds: 250),
           curve: Curves.easeOutCubic,
-
-          margin: const EdgeInsets.symmetric(
-            horizontal: 4,
-          ),
-
-          padding: const EdgeInsets.symmetric(
-            vertical: 7,
-          ),
-
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 7),
           decoration: BoxDecoration(
             color: selected
-                ? const Color(0xFF8B5CF6)
-                    .withOpacity(0.13)
+                ? const Color(0xFF8B5CF6).withOpacity(0.13)
                 : Colors.transparent,
-
-            borderRadius:
-                BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(16),
           ),
-
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedScale(
                 scale: selected ? 1.08 : 1.0,
-
-                duration: const Duration(
-                  milliseconds: 250,
-                ),
-
+                duration: const Duration(milliseconds: 250),
                 child: Icon(
                   icon,
                   size: 23,
-
                   color: selected
                       ? const Color(0xFFC4B5FD)
                       : Colors.white.withOpacity(0.40),
                 ),
               ),
-
               const SizedBox(height: 4),
-
               AnimatedDefaultTextStyle(
-                duration: const Duration(
-                  milliseconds: 200,
-                ),
-
+                duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   color: selected
                       ? const Color(0xFFC4B5FD)
                       : Colors.white.withOpacity(0.40),
-
                   fontSize: 10,
-
                   fontWeight: selected
                       ? FontWeight.w600
                       : FontWeight.w400,
                 ),
-
                 child: Text(label),
               ),
             ],
@@ -307,12 +241,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ================================================================
-// ADMIN PROFILE
-// ================================================================
-
-class _AdminProfileScreen
-    extends StatelessWidget {
+class _AdminProfileScreen extends StatelessWidget {
   final UserProfile user;
 
   const _AdminProfileScreen({
@@ -326,7 +255,6 @@ class _AdminProfileScreen
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-
           colors: [
             Color(0xFF060917),
             Color(0xFF0B1430),
@@ -334,42 +262,32 @@ class _AdminProfileScreen
           ],
         ),
       ),
-
       child: SafeArea(
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 96,
                   height: 96,
-
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-
                     color: const Color(0xFF8B5CF6)
                         .withOpacity(0.14),
-
                     border: Border.all(
                       color: const Color(0xFF8B5CF6)
                           .withOpacity(0.25),
                     ),
-
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF8B5CF6)
                             .withOpacity(0.18),
-
                         blurRadius: 25,
                       ),
                     ],
                   ),
-
                   child: const Icon(
                     Icons.person_rounded,
                     color: Color(0xFFC4B5FD),
@@ -382,7 +300,6 @@ class _AdminProfileScreen
                 Text(
                   user.name,
                   textAlign: TextAlign.center,
-
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 26,
@@ -395,7 +312,6 @@ class _AdminProfileScreen
                 Text(
                   user.email,
                   textAlign: TextAlign.center,
-
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.50),
                     fontSize: 14,
@@ -405,23 +321,17 @@ class _AdminProfileScreen
                 const SizedBox(height: 14),
 
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 7,
                   ),
-
                   decoration: BoxDecoration(
                     color: const Color(0xFF8B5CF6)
                         .withOpacity(0.12),
-
-                    borderRadius:
-                        BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-
                   child: Text(
                     user.role.toUpperCase(),
-
                     style: const TextStyle(
                       color: Color(0xFFC4B5FD),
                       fontSize: 11,

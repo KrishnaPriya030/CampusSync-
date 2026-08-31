@@ -1,28 +1,56 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/login_response.dart';
 import '../models/user_profile.dart';
-//All api calls happens here
+
 class AuthService {
-  static const String baseUrl = 'http://127.0.0.1:8080'; //this is the backend address.All api calls will go here
-  
-  Future<LoginResponse> login(String email, String password) async {//this is login method.You give the email and password and it will return login response
+  static const String baseUrl = 'http://127.0.0.1:8080';
+
+  // ============================================================
+  // LOGIN
+  // ============================================================
+
+  Future<LoginResponse> login(
+    String email,
+    String password,
+  ) async {
     final url = Uri.parse('$baseUrl/api/auth/login');
-    final response = await http.post(//Go to /api/auth/login and give email/password to backend. Backend will check and return token.
+
+    final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+      }),
     );
+
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return LoginResponse.fromJson(data);//If status is 200 (success), then LoginResponse.fromJson(data) - convert backend JSON into Dart object.
+      final data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
+      return LoginResponse.fromJson(data);
     }
-    throw Exception('Login failed');
+
+    throw Exception(
+      'Login failed: ${response.statusCode}',
+    );
   }
 
-  
-  Future<UserProfile> getCurrentUser(String token) async {
+  // ============================================================
+  // GET CURRENT USER
+  // ============================================================
+
+  Future<UserProfile> getCurrentUser(
+    String token,
+  ) async {
     final url = Uri.parse('$baseUrl/api/users/me');
+
     final response = await http.get(
       url,
       headers: {
@@ -30,13 +58,22 @@ class AuthService {
         'Authorization': 'Bearer $token',
       },
     );
+
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+      final data =
+          jsonDecode(response.body) as Map<String, dynamic>;
+
       return UserProfile.fromJson(data);
-    } else {
-      throw Exception('Token expired');
     }
+
+    throw Exception(
+      'Failed to get current user: ${response.statusCode}',
+    );
   }
+
+  // ============================================================
+  // CHANGE PASSWORD
+  // ============================================================
 
   Future<void> changePassword(
     String currentPassword,
@@ -44,7 +81,9 @@ class AuthService {
     String confirmPassword,
     String token,
   ) async {
-    final url = Uri.parse('$baseUrl/api/users/change-password');
+    final url =
+        Uri.parse('$baseUrl/api/users/change-password');
+
     final response = await http.put(
       url,
       headers: {
@@ -57,8 +96,35 @@ class AuthService {
         'confirmPassword': confirmPassword,
       }),
     );
+
     if (response.statusCode != 200) {
-      throw Exception('Password change failed');
+      throw Exception(
+        'Password change failed: ${response.statusCode}',
+      );
     }
+  }
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Remove authentication/session information.
+    await prefs.remove('token');
+    await prefs.remove('accessToken');
+    await prefs.remove('user');
+    await prefs.remove('userProfile');
+  }
+
+  // ============================================================
+  // CLEAR ALL SESSION DATA
+  // ============================================================
+
+  Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    await prefs.clear();
   }
 }
