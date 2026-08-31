@@ -18,7 +18,9 @@ public record OrganizerResponse(
 
         String designation,
 
-        String accountStatus
+        String accountStatus,
+
+        boolean firstLogin
 
 ) {
 }
