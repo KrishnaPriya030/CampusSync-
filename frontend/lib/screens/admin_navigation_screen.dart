@@ -4,6 +4,7 @@ import '../models/user_profile.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_organizations_screen.dart';
 import 'admin_organizers_screen.dart';
+import 'admin_students_screen.dart';
 
 class AdminNavigationScreen extends StatefulWidget {
   final UserProfile user;
@@ -38,11 +39,17 @@ class _AdminNavigationScreenState
 
       const AdminOrganizersScreen(),
 
+       
+
       _AdminProfileScreen(
         user: widget.user,
       ),
     ];
   }
+
+  // ================================================================
+  // CHANGE PAGE
+  // ================================================================
 
   void _changePage(int index) {
     if (index == _selectedIndex) {
@@ -54,6 +61,10 @@ class _AdminNavigationScreenState
       _selectedIndex = index;
     });
   }
+
+  // ================================================================
+  // BUILD
+  // ================================================================
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +117,10 @@ class _AdminNavigationScreenState
     );
   }
 
+  // ================================================================
+  // BOTTOM NAVIGATION
+  // ================================================================
+
   Widget _buildBottomNavigation() {
     return Container(
       decoration: BoxDecoration(
@@ -133,12 +148,20 @@ class _AdminNavigationScreenState
           ),
           child: Row(
             children: [
+              // ------------------------------------------------
+              // DASHBOARD
+              // ------------------------------------------------
+
               _NavItem(
                 icon: Icons.dashboard_rounded,
                 label: 'Dashboard',
                 selected: _selectedIndex == 0,
                 onTap: () => _changePage(0),
               ),
+
+              // ------------------------------------------------
+              // ORGANIZATIONS
+              // ------------------------------------------------
 
               _NavItem(
                 icon: Icons.business_rounded,
@@ -147,6 +170,10 @@ class _AdminNavigationScreenState
                 onTap: () => _changePage(1),
               ),
 
+              // ------------------------------------------------
+              // ORGANIZERS
+              // ------------------------------------------------
+
               _NavItem(
                 icon: Icons.groups_rounded,
                 label: 'Organizers',
@@ -154,11 +181,26 @@ class _AdminNavigationScreenState
                 onTap: () => _changePage(2),
               ),
 
+              // ------------------------------------------------
+              // STUDENTS
+              // ------------------------------------------------
+
+              _NavItem(
+                icon: Icons.school_rounded,
+                label: 'Students',
+                selected: _selectedIndex == 3,
+                onTap: () => _changePage(3),
+              ),
+
+              // ------------------------------------------------
+              // PROFILE
+              // ------------------------------------------------
+
               _NavItem(
                 icon: Icons.person_rounded,
                 label: 'Profile',
-                selected: _selectedIndex == 3,
-                onTap: () => _changePage(3),
+                selected: _selectedIndex == 4,
+                onTap: () => _changePage(4),
               ),
             ],
           ),

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
+import 'admin_student_form_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   final UserProfile user;
@@ -31,7 +32,6 @@ class AdminDashboardScreen extends StatelessWidget {
         child: SafeArea(
           child: Stack(
             children: [
-              // Background glow
               Positioned(
                 top: -100,
                 right: -80,
@@ -40,7 +40,8 @@ class AdminDashboardScreen extends StatelessWidget {
                   height: 260,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF8B5CF6).withOpacity(0.14),
+                    color:
+                        const Color(0xFF8B5CF6).withOpacity(0.14),
                   ),
                 ),
               ),
@@ -53,19 +54,23 @@ class AdminDashboardScreen extends StatelessWidget {
                   height: 280,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF3B82F6).withOpacity(0.08),
+                    color:
+                        const Color(0xFF3B82F6).withOpacity(0.08),
                   ),
                 ),
               ),
 
               SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+                padding:
+                    const EdgeInsets.fromLTRB(20, 20, 20, 30),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
-                    // ------------------------------------------------
+                    // ==================================================
                     // TOP PROFILE HEADER
-                    // ------------------------------------------------
+                    // ==================================================
+
                     Row(
                       children: [
                         Container(
@@ -73,7 +78,8 @@ class AdminDashboardScreen extends StatelessWidget {
                           height: 52,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: const LinearGradient(
+                            gradient:
+                                const LinearGradient(
                               colors: [
                                 Color(0xFF8B5CF6),
                                 Color(0xFF6366F1),
@@ -81,8 +87,9 @@ class AdminDashboardScreen extends StatelessWidget {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF8B5CF6)
-                                    .withOpacity(0.30),
+                                color:
+                                    const Color(0xFF8B5CF6)
+                                        .withOpacity(0.30),
                                 blurRadius: 20,
                               ),
                             ],
@@ -90,10 +97,12 @@ class AdminDashboardScreen extends StatelessWidget {
                           child: Center(
                             child: Text(
                               _initials(user.name),
-                              style: const TextStyle(
+                              style:
+                                  const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontWeight:
+                                    FontWeight.bold,
                               ),
                             ),
                           ),
@@ -103,12 +112,14 @@ class AdminDashboardScreen extends StatelessWidget {
 
                         Expanded(
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Text(
                                 'Welcome back,',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.55),
+                                  color: Colors.white
+                                      .withOpacity(0.55),
                                   fontSize: 13,
                                 ),
                               ),
@@ -116,20 +127,25 @@ class AdminDashboardScreen extends StatelessWidget {
                               Text(
                                 user.name,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                overflow:
+                                    TextOverflow.ellipsis,
+                                style:
+                                    const TextStyle(
                                   color: Colors.white,
                                   fontSize: 21,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight:
+                                      FontWeight.w700,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 user.email,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                overflow:
+                                    TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.45),
+                                  color: Colors.white
+                                      .withOpacity(0.45),
                                   fontSize: 12,
                                 ),
                               ),
@@ -138,24 +154,32 @@ class AdminDashboardScreen extends StatelessWidget {
                         ),
 
                         Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding:
+                              const EdgeInsets.symmetric(
                             horizontal: 12,
                             vertical: 8,
                           ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(14),
+                          decoration:
+                              BoxDecoration(
+                            color:
+                                const Color(0xFF8B5CF6)
+                                    .withOpacity(0.12),
+                            borderRadius:
+                                BorderRadius.circular(14),
                             border: Border.all(
-                              color: const Color(0xFF8B5CF6)
-                                  .withOpacity(0.25),
+                              color:
+                                  const Color(0xFF8B5CF6)
+                                      .withOpacity(0.25),
                             ),
                           ),
                           child: const Text(
                             'ADMIN',
                             style: TextStyle(
-                              color: Color(0xFFC4B5FD),
+                              color:
+                                  Color(0xFFC4B5FD),
                               fontSize: 11,
-                              fontWeight: FontWeight.bold,
+                              fontWeight:
+                                  FontWeight.bold,
                               letterSpacing: 0.8,
                             ),
                           ),
@@ -165,9 +189,10 @@ class AdminDashboardScreen extends StatelessWidget {
 
                     const SizedBox(height: 32),
 
-                    // ------------------------------------------------
+                    // ==================================================
                     // TITLE
-                    // ------------------------------------------------
+                    // ==================================================
+
                     const Text(
                       'Admin Dashboard',
                       style: TextStyle(
@@ -182,28 +207,32 @@ class AdminDashboardScreen extends StatelessWidget {
                     Text(
                       'Manage your CampusSync platform',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.50),
+                        color:
+                            Colors.white.withOpacity(0.50),
                         fontSize: 14,
                       ),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // ------------------------------------------------
+                    // ==================================================
                     // STATISTICS
-                    // ------------------------------------------------
+                    // ==================================================
+
                     GridView.count(
                       crossAxisCount: 2,
                       crossAxisSpacing: 14,
                       mainAxisSpacing: 14,
                       shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
+                      physics:
+                          const NeverScrollableScrollPhysics(),
                       childAspectRatio: 1.45,
                       children: const [
                         _StatCard(
                           title: 'Organizations',
                           value: '0',
-                          icon: Icons.business_rounded,
+                          icon:
+                              Icons.business_rounded,
                         ),
                         _StatCard(
                           title: 'Organizers',
@@ -213,21 +242,24 @@ class AdminDashboardScreen extends StatelessWidget {
                         _StatCard(
                           title: 'Active',
                           value: '0',
-                          icon: Icons.check_circle_rounded,
+                          icon:
+                              Icons.check_circle_rounded,
                         ),
                         _StatCard(
                           title: 'Pending',
                           value: '0',
-                          icon: Icons.pending_actions_rounded,
+                          icon:
+                              Icons.pending_actions_rounded,
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 28),
 
-                    // ------------------------------------------------
+                    // ==================================================
                     // MANAGEMENT
-                    // ------------------------------------------------
+                    // ==================================================
+
                     const Text(
                       'Management',
                       style: TextStyle(
@@ -242,41 +274,79 @@ class AdminDashboardScreen extends StatelessWidget {
                     _ManagementCard(
                       icon: Icons.business_rounded,
                       title: 'Organizations',
-                      subtitle: 'Create and manage organizations',
+                      subtitle:
+                          'Create and manage organizations',
                       onTap: () {
-                        // Organizations screen will be added next.
+                        // Existing organization navigation.
                       },
                     ),
 
                     const SizedBox(height: 12),
 
                     _ManagementCard(
-                      icon: Icons.manage_accounts_rounded,
+                      icon:
+                          Icons.manage_accounts_rounded,
                       title: 'Organizers',
-                      subtitle: 'Manage organizer accounts and access',
+                      subtitle:
+                          'Manage organizer accounts and access',
                       onTap: () {
-                        // Organizers screen will be added next.
+                        // Existing organizer navigation.
                       },
                     ),
 
                     const SizedBox(height: 12),
 
                     _ManagementCard(
-                      icon: Icons.person_add_alt_1_rounded,
+                      icon:
+                          Icons.person_add_alt_1_rounded,
                       title: 'Organizer Activation',
-                      subtitle: 'Review and activate organizer accounts',
+                      subtitle:
+                          'Review and activate organizer accounts',
                       onTap: () {
-                        // Activation screen will be added next.
+                        // Existing activation navigation.
+                      },
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // ==================================================
+                    // STUDENT MANAGEMENT
+                    // ==================================================
+
+                    _ManagementCard(
+                      icon:
+                          Icons.school_rounded,
+                      title: 'Students',
+                      subtitle:
+                          'Create, edit and manage student accounts',
+                      onTap: () async {
+                        final result =
+                            await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AdminStudentFormScreen(),
+                          ),
+                        );
+
+                        if (result == true) {
+                          // Student was successfully created.
+                          // The student list can be refreshed
+                          // when the student management screen
+                          // is connected.
+                        }
                       },
                     ),
 
                     const SizedBox(height: 28),
 
-                    // ------------------------------------------------
+                    // ==================================================
                     // PLATFORM CARD
-                    // ------------------------------------------------
+                    // ==================================================
+
                     ClipRRect(
-                      borderRadius: BorderRadius.circular(22),
+                      borderRadius:
+                          BorderRadius.circular(22),
                       child: BackdropFilter(
                         filter: ImageFilter.blur(
                           sigmaX: 16,
@@ -284,12 +354,16 @@ class AdminDashboardScreen extends StatelessWidget {
                         ),
                         child: Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.all(20),
+                          padding:
+                              const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(22),
+                            color: Colors.white
+                                .withOpacity(0.06),
+                            borderRadius:
+                                BorderRadius.circular(22),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.10),
+                              color: Colors.white
+                                  .withOpacity(0.10),
                             ),
                           ),
                           child: Row(
@@ -297,14 +371,22 @@ class AdminDashboardScreen extends StatelessWidget {
                               Container(
                                 width: 46,
                                 height: 46,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF8B5CF6)
-                                      .withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(14),
+                                decoration:
+                                    BoxDecoration(
+                                  color:
+                                      const Color(
+                                    0xFF8B5CF6,
+                                  ).withOpacity(0.12),
+                                  borderRadius:
+                                      BorderRadius.circular(
+                                    14,
+                                  ),
                                 ),
                                 child: const Icon(
-                                  Icons.admin_panel_settings_rounded,
-                                  color: Color(0xFFC4B5FD),
+                                  Icons
+                                      .admin_panel_settings_rounded,
+                                  color:
+                                      Color(0xFFC4B5FD),
                                 ),
                               ),
 
@@ -313,21 +395,31 @@ class AdminDashboardScreen extends StatelessWidget {
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                      CrossAxisAlignment
+                                          .start,
                                   children: [
                                     const Text(
                                       'Platform Administration',
-                                      style: TextStyle(
-                                        color: Colors.white,
+                                      style:
+                                          TextStyle(
+                                        color:
+                                            Colors.white,
                                         fontSize: 15,
-                                        fontWeight: FontWeight.w600,
+                                        fontWeight:
+                                            FontWeight.w600,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(
+                                        height: 4),
                                     Text(
                                       'You have full administrative access.',
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.45),
+                                      style:
+                                          TextStyle(
+                                        color: Colors
+                                            .white
+                                            .withOpacity(
+                                          0.45,
+                                        ),
                                         fontSize: 12,
                                       ),
                                     ),
@@ -350,9 +442,11 @@ class AdminDashboardScreen extends StatelessWidget {
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts =
+        name.trim().split(RegExp(r'\s+'));
 
-    if (parts.isEmpty || parts.first.isEmpty) {
+    if (parts.isEmpty ||
+        parts.first.isEmpty) {
       return 'A';
     }
 
@@ -360,7 +454,8 @@ class AdminDashboardScreen extends StatelessWidget {
       return parts.first[0].toUpperCase();
     }
 
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    return '${parts.first[0]}${parts.last[0]}'
+        .toUpperCase();
   }
 }
 
@@ -382,55 +477,69 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
+      borderRadius:
+          BorderRadius.circular(20),
       child: BackdropFilter(
         filter: ImageFilter.blur(
           sigmaX: 14,
           sigmaY: 14,
         ),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding:
+              const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(20),
+            color:
+                Colors.white.withOpacity(0.06),
+            borderRadius:
+                BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.10),
+              color:
+                  Colors.white.withOpacity(0.10),
             ),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            mainAxisAlignment:
+                MainAxisAlignment.spaceBetween,
             children: [
               Container(
                 width: 38,
                 height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color:
+                      const Color(0xFF8B5CF6)
+                          .withOpacity(0.12),
+                  borderRadius:
+                      BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
-                  color: const Color(0xFFC4B5FD),
+                  color:
+                      const Color(0xFFC4B5FD),
                   size: 21,
                 ),
               ),
-
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
                 children: [
                   Text(
                     value,
-                    style: const TextStyle(
+                    style:
+                        const TextStyle(
                       color: Colors.white,
                       fontSize: 25,
-                      fontWeight: FontWeight.w700,
+                      fontWeight:
+                          FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     title,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.45),
+                      color: Colors.white
+                          .withOpacity(0.45),
                       fontSize: 11,
                     ),
                   ),
@@ -466,22 +575,28 @@ class _ManagementCard extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius:
+            BorderRadius.circular(20),
         onTap: onTap,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius:
+              BorderRadius.circular(20),
           child: BackdropFilter(
             filter: ImageFilter.blur(
               sigmaX: 14,
               sigmaY: 14,
             ),
             child: Container(
-              padding: const EdgeInsets.all(17),
+              padding:
+                  const EdgeInsets.all(17),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(20),
+                color:
+                    Colors.white.withOpacity(0.06),
+                borderRadius:
+                    BorderRadius.circular(20),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
+                  color:
+                      Colors.white.withOpacity(0.10),
                 ),
               ),
               child: Row(
@@ -489,13 +604,20 @@ class _ManagementCard extends StatelessWidget {
                   Container(
                     width: 48,
                     height: 48,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF8B5CF6).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(14),
+                    decoration:
+                        BoxDecoration(
+                      color:
+                          const Color(0xFF8B5CF6)
+                              .withOpacity(0.12),
+                      borderRadius:
+                          BorderRadius.circular(
+                        14,
+                      ),
                     ),
                     child: Icon(
                       icon,
-                      color: const Color(0xFFC4B5FD),
+                      color:
+                          const Color(0xFFC4B5FD),
                       size: 23,
                     ),
                   ),
@@ -504,21 +626,29 @@ class _ManagementCard extends StatelessWidget {
 
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.start,
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.white,
                             fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontWeight:
+                                FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(
+                            height: 4),
                         Text(
                           subtitle,
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.45),
+                            color: Colors.white
+                                .withOpacity(
+                              0.45,
+                            ),
                             fontSize: 12,
                           ),
                         ),
@@ -527,8 +657,10 @@ class _ManagementCard extends StatelessWidget {
                   ),
 
                   Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: Colors.white.withOpacity(0.35),
+                    Icons
+                        .arrow_forward_ios_rounded,
+                    color: Colors.white
+                        .withOpacity(0.35),
                     size: 16,
                   ),
                 ],
