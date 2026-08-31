@@ -87,6 +87,7 @@ class _AdminStudentFormScreenState
 
     _nameController.text = student.name;
     _emailController.text = student.email;
+    _phoneController.text = student.phoneNumber ?? '';
     _registerNumberController.text =
         student.registerNumber;
     _programmeController.text =

@@ -2,6 +2,7 @@ class Student {
   final int id;
   final String name;
   final String email;
+  final String? phoneNumber;
   final String registerNumber;
 
   final int departmentId;
@@ -23,6 +24,7 @@ class Student {
     required this.id,
     required this.name,
     required this.email,
+    required this.phoneNumber,
     required this.registerNumber,
     required this.departmentId,
     required this.departmentName,
@@ -37,23 +39,54 @@ class Student {
     required this.accountStatus,
   });
 
-  factory Student.fromJson(Map<String, dynamic> json) {
+  factory Student.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return Student(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      registerNumber: json['registerNumber'],
-      departmentId: json['departmentId'],
-      departmentName: json['departmentName'],
-      branchId: json['branchId'],
-      branchName: json['branchName'],
-      programme: json['programme'],
-      admissionYear: json['admissionYear'],
-      semester: json['semester'],
-      graduationYear: json['graduationYear'],
-      internal: json['internal'] ?? false,
-      status: json['status'] ?? '',
-      accountStatus: json['accountStatus'] ?? '',
+      id: (json['id'] as num?)?.toInt() ?? 0,
+
+      name: json['name']?.toString() ?? '',
+
+      email: json['email']?.toString() ?? '',
+
+      phoneNumber:
+          json['phoneNumber']?.toString(),
+
+      registerNumber:
+          json['registerNumber']?.toString() ?? '',
+
+      departmentId:
+          (json['departmentId'] as num?)?.toInt() ?? 0,
+
+      departmentName:
+          json['departmentName']?.toString() ?? '',
+
+      branchId:
+          (json['branchId'] as num?)?.toInt() ?? 0,
+
+      branchName:
+          json['branchName']?.toString() ?? '',
+
+      programme:
+          json['programme']?.toString() ?? '',
+
+      admissionYear:
+          (json['admissionYear'] as num?)?.toInt() ?? 0,
+
+      semester:
+          (json['semester'] as num?)?.toInt() ?? 0,
+
+      graduationYear:
+          (json['graduationYear'] as num?)?.toInt() ?? 0,
+
+      internal:
+          json['internal'] == true,
+
+      status:
+          json['status']?.toString() ?? '',
+
+      accountStatus:
+          json['accountStatus']?.toString() ?? '',
     );
   }
-} 
+}
