@@ -32,4 +32,7 @@ public interface EventRegistrationRepository
             Long eventId,
             Long studentId
     );
+    List<EventRegistration> findByStudentIdOrderByRegisteredAtDesc(
+        Long studentId
+);
 }

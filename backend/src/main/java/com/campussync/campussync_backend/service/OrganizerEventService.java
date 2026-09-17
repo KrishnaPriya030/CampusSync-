@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.service;
 
 import java.math.BigDecimal;
@@ -95,6 +96,9 @@ public class OrganizerEventService {
                 request.certificateEnabled());
 
         event.setStatus(EventStatus.DRAFT);
+        event.setApprovedBy(null);
+        event.setApprovedAt(null);
+        event.setRejectionReason(null);
         event.setDeleted(false);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
@@ -162,6 +166,20 @@ public class OrganizerEventService {
         Event event =
                 getOwnedEvent(userId, eventId);
 
+        /*
+         * Only DRAFT and REJECTED events can be edited.
+         *
+         * Once an event has been submitted for approval,
+         * approved, or published, the Organizer cannot
+         * modify it through this endpoint.
+         */
+        if (event.getStatus() != EventStatus.DRAFT
+                && event.getStatus() != EventStatus.REJECTED) {
+
+            throw new RuntimeException(
+                    "Only draft or rejected events can be edited");
+        }
+
         event.setTitle(request.title());
         event.setDescription(request.description());
         event.setVenue(request.venue());
@@ -199,6 +217,55 @@ public class OrganizerEventService {
         event.setCertificateEnabled(
                 request.certificateEnabled());
 
+        /*
+         * If a rejected event is edited, keep it rejected
+         * until the Organizer explicitly submits it again.
+         */
+        event.setUpdatedAt(LocalDateTime.now());
+
+        return toResponse(
+                eventRepository.save(event));
+    }
+
+    // ============================================================
+    // SUBMIT FOR APPROVAL
+    // ============================================================
+
+    @Transactional
+    public EventResponse submitForApproval(
+            Long userId,
+            Long eventId) {
+
+        Event event =
+                getOwnedEvent(userId, eventId);
+
+        if (event.getStatus() != EventStatus.DRAFT
+                && event.getStatus() != EventStatus.REJECTED) {
+
+            throw new RuntimeException(
+                    "Only draft or rejected events can be submitted for approval");
+        }
+
+        /*
+         * Re-check the event timing before sending it
+         * to a Department Head or Organization Head.
+         */
+        if (event.getRegistrationDeadline()
+                .isAfter(event.getStartDateTime())) {
+
+            throw new RuntimeException(
+                    "Registration deadline must be before event start");
+        }
+
+        /*
+         * A new approval cycle starts here.
+         */
+        event.setStatus(
+                EventStatus.PENDING_APPROVAL);
+
+        event.setApprovedBy(null);
+        event.setApprovedAt(null);
+        event.setRejectionReason(null);
         event.setUpdatedAt(LocalDateTime.now());
 
         return toResponse(
@@ -242,9 +309,14 @@ public class OrganizerEventService {
         Event event =
                 getOwnedEvent(userId, eventId);
 
-        if (event.getStatus() != EventStatus.DRAFT) {
+        /*
+         * An Organizer can publish only after the
+         * appropriate Head has approved the event.
+         */
+        if (event.getStatus() != EventStatus.APPROVED) {
+
             throw new RuntimeException(
-                    "Only draft events can be published");
+                    "Only approved events can be published");
         }
 
         if (event.getRegistrationDeadline()
@@ -411,3 +483,4 @@ public class OrganizerEventService {
         );
     }
 }
+

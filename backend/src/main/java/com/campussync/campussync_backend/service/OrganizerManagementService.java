@@ -304,19 +304,21 @@ public class OrganizerManagementService {
         /*
          * Make sure this is an organizer account.
          */
-        if (user.getRole() != Role.ORGANIZER) {
-            throw new RuntimeException(
-                    "Invalid organizer activation");
-        }
+       if (user.getRole() != Role.ORGANIZER
+        && user.getRole() != Role.DEPARTMENT_HEAD
+        && user.getRole() != Role.ORGANIZATION_HEAD) {
+    throw new RuntimeException(
+            "Invalid account activation");
+}
 
         /*
          * Make sure the organizer account has
          * not been blocked by the admin.
          */
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new RuntimeException(
-                    "Organizer account is blocked");
-        }
+       if (user.getStatus() == UserStatus.BLOCKED) {
+    throw new RuntimeException(
+            "Account is blocked");
+}
 
         /*
          * Set the organizer's real password.

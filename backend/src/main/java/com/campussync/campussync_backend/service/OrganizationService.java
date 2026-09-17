@@ -159,6 +159,18 @@ public class OrganizationService {
                 organizationRepository.save(organization));
     }
 
+    @Transactional
+    public void delete(Long id) {
+
+        Organization organization =
+                organizationRepository.findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Organization not found"));
+
+        organizationRepository.delete(organization);
+    }
+
     private OrganizationResponse toResponse(
             Organization organization) {
 

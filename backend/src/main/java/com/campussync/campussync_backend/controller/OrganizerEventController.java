@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.controller;
 
 import java.util.List;
@@ -28,7 +29,6 @@ public class OrganizerEventController {
 
     // ============================================================
     // CREATE EVENT
-    // POST /api/organizer/events
     // ============================================================
 
     @PostMapping
@@ -36,7 +36,8 @@ public class OrganizerEventController {
             @Valid @RequestBody CreateEventRequest request,
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         EventResponse response =
                 eventService.create(
@@ -48,23 +49,22 @@ public class OrganizerEventController {
 
     // ============================================================
     // GET MY EVENTS
-    // GET /api/organizer/events
     // ============================================================
 
     @GetMapping
     public ResponseEntity<List<EventResponse>> getMyEvents(
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
-                eventService.getMyEvents(user.getId())
-        );
+                eventService.getMyEvents(
+                        user.getId()));
     }
 
     // ============================================================
     // GET EVENT BY ID
-    // GET /api/organizer/events/{id}
     // ============================================================
 
     @GetMapping("/{id}")
@@ -72,18 +72,17 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.getById(
                         user.getId(),
-                        id)
-        );
+                        id));
     }
 
     // ============================================================
     // UPDATE EVENT
-    // PUT /api/organizer/events/{id}
     // ============================================================
 
     @PutMapping("/{id}")
@@ -92,19 +91,36 @@ public class OrganizerEventController {
             @Valid @RequestBody UpdateEventRequest request,
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.update(
                         user.getId(),
                         id,
-                        request)
-        );
+                        request));
+    }
+
+    // ============================================================
+    // SUBMIT FOR APPROVAL
+    // ============================================================
+
+    @PutMapping("/{id}/submit")
+    public ResponseEntity<EventResponse> submitForApproval(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        User user =
+                getAuthenticatedUser(authentication);
+
+        return ResponseEntity.ok(
+                eventService.submitForApproval(
+                        user.getId(),
+                        id));
     }
 
     // ============================================================
     // DELETE EVENT
-    // DELETE /api/organizer/events/{id}
     // ============================================================
 
     @DeleteMapping("/{id}")
@@ -112,7 +128,8 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         eventService.delete(
                 user.getId(),
@@ -123,7 +140,6 @@ public class OrganizerEventController {
 
     // ============================================================
     // PUBLISH EVENT
-    // PUT /api/organizer/events/{id}/publish
     // ============================================================
 
     @PutMapping("/{id}/publish")
@@ -131,13 +147,13 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user = getAuthenticatedUser(authentication);
+        User user =
+                getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.publish(
                         user.getId(),
-                        id)
-        );
+                        id));
     }
 
     // ============================================================

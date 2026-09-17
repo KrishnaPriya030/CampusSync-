@@ -9,7 +9,7 @@ import com.campussync.campussync_backend.service.OrganizerManagementService;
 import jakarta.validation.Valid;
 
 @RestController
-@RequestMapping("/api/auth/organizer")
+@RequestMapping("/api/auth")
 public class OrganizerActivationController {
 
     private final OrganizerManagementService organizerService;
@@ -29,7 +29,7 @@ public class OrganizerActivationController {
                 request.getPassword(),
                 request.getConfirmPassword());
 
-        return ResponseEntity.ok(
-                "Organizer account activated successfully");
-    }
+return ResponseEntity.ok(
+        "Account activated successfully");
+}
 }

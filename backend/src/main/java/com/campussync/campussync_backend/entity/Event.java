@@ -1,7 +1,9 @@
+
 package com.campussync.campussync_backend.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.campussync.campussync_backend.enums.CapacityType;
 import com.campussync.campussync_backend.enums.EventStatus;
@@ -16,12 +18,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import java.util.List;
-import jakarta.persistence.OneToMany;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -36,9 +37,6 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /*
-     * Every event belongs to exactly one organizer.
-     */
     @ManyToOne(optional = false)
     @JoinColumn(name = "organizer_id", nullable = false)
     private Organizer organizer;
@@ -72,9 +70,6 @@ public class Event {
     @Column(nullable = false)
     private CapacityType capacityType;
 
-    /*
-     * Null when capacityType = UNLIMITED.
-     */
     private Integer capacity;
 
     @NotNull
@@ -82,32 +77,17 @@ public class Event {
     @Column(nullable = false)
     private PaymentType paymentType;
 
-    /*
-     * 0 for FREE events.
-     */
     @NotNull
     @DecimalMin(value = "0.00")
     @Column(precision = 10, scale = 2, nullable = false)
     private BigDecimal registrationFee = BigDecimal.ZERO;
 
-    /*
-     * Stored with the event so historical registrations
-     * retain the policy that was displayed to students.
-     */
     @Column(columnDefinition = "TEXT")
     private String refundPolicy;
 
-    /*
-     * Optional attendance.
-     */
     @Column(nullable = false)
     private boolean attendanceEnabled = false;
 
-    /*
-     * Optional certificates.
-     * Backend validation will require attendanceEnabled
-     * when this is true.
-     */
     @Column(nullable = false)
     private boolean certificateEnabled = false;
 
@@ -116,9 +96,15 @@ public class Event {
     @Column(nullable = false)
     private EventStatus status = EventStatus.DRAFT;
 
-    /*
-     * We use soft deletion instead of physical deletion.
-     */
+    @Column(name = "approved_by")
+    private Long approvedBy;
+
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Column(nullable = false)
     private boolean deleted = false;
 
@@ -126,10 +112,8 @@ public class Event {
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;
-    @OneToMany(
-    mappedBy = "event"
-)
-private List<EventRegistration> registrations;
 
-
+    @OneToMany(mappedBy = "event")
+    private List<EventRegistration> registrations;
 }
+

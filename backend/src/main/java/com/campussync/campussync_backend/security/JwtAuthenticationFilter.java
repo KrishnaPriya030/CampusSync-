@@ -58,7 +58,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
 
-            // Check whether JWT was logged out
+            // ====================================================
+            // CHECK TOKEN REVOCATION
+            // ====================================================
+
             if (tokenRevocationService.isRevoked(token)) {
 
                 response.setStatus(
@@ -73,6 +76,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 return;
             }
+
+            // ====================================================
+            // EXTRACT EMAIL
+            // ====================================================
 
             String email =
                     jwtService.extractEmail(token);
@@ -89,12 +96,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 if (user != null) {
 
+                    // ============================================
+                    // VALIDATE JWT
+                    // ============================================
+
                     boolean valid =
                             jwtService.isTokenValid(
                                     token,
                                     user.getEmail());
 
                     if (valid) {
+
+                        // ========================================
+                        // CHECK ACCOUNT STATUS
+                        // ========================================
 
                         if (user.getStatus()
                                 != UserStatus.ACTIVE) {
@@ -105,6 +120,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                             return;
                         }
+
+                        // ========================================
+                        // CREATE AUTHENTICATION
+                        // ========================================
 
                         UsernamePasswordAuthenticationToken
                                 authentication =
@@ -120,10 +139,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                         )
                                 );
 
+                        // ========================================
+                        // SET SECURITY CONTEXT
+                        // ========================================
+
                         SecurityContextHolder
                                 .getContext()
                                 .setAuthentication(
                                         authentication);
+
+                        // ========================================
+                        // TEMPORARY DEBUG
+                        // ========================================
+
+                        System.out.println(
+                                "JWT AUTHORITY: "
+                                        + authentication
+                                                .getAuthorities());
                     }
                 }
             }

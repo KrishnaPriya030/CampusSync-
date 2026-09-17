@@ -12,6 +12,7 @@ public interface PaymentRepository
 
     Optional<Payment> findByRegistrationId(
             Long registrationId);
+            Optional<Payment> findByRazorpayOrderId(String razorpayOrderId);
 
     List<Payment> findByRegistrationEventIdOrderByCreatedAtDesc(
             Long eventId);

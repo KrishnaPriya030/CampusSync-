@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.config;
 
 import org.springframework.context.annotation.Bean;
@@ -39,11 +40,36 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/organizer/**").hasRole("ORGANIZER")
-                .requestMatchers("/api/student/**").hasRole("STUDENT")
-                .anyRequest().authenticated()
+
+                // Public authentication endpoints
+                .requestMatchers("/api/auth/**")
+                .permitAll()
+                .requestMatchers("/error")
+.permitAll()
+
+                // Admin
+                .requestMatchers("/api/admin/**")
+                .hasRole("ADMIN")
+
+                // Organizer
+                .requestMatchers("/api/organizer/**")
+                .hasRole("ORGANIZER")
+
+                // Department Head
+                .requestMatchers("/api/department-head/**")
+                .hasRole("DEPARTMENT_HEAD")
+
+                // Organization Head
+                .requestMatchers("/api/organization-head/**")
+                .hasRole("ORGANIZATION_HEAD")
+
+                // Student
+                .requestMatchers("/api/student/**")
+                .hasRole("STUDENT")
+
+                // Everything else requires authentication
+                .anyRequest()
+                .authenticated()
             )
 
             .sessionManagement(session -> session
@@ -65,3 +91,4 @@ public class SecurityConfig {
         return http.build();
     }
 }
+

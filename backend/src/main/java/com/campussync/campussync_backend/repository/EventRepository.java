@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.campussync.campussync_backend.entity.Event;
+import com.campussync.campussync_backend.enums.EventStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -36,4 +37,31 @@ public interface EventRepository
             """)
     Optional<Event> findByIdForUpdate(
             @Param("id") Long id);
+
+    // ============================================================
+    // DEPARTMENT HEAD EVENT DASHBOARD
+    // ============================================================
+
+    List<Event> findByOrganizerOrganizationDepartmentIdAndDeletedFalseOrderByCreatedAtDesc(
+            Long departmentId);
+
+    List<Event> findByOrganizerOrganizationDepartmentIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
+            Long departmentId,
+            EventStatus status);
+
+    // ============================================================
+    // ORGANIZATION HEAD EVENT DASHBOARD
+    // ============================================================
+
+    List<Event> findByOrganizerOrganizationIdAndDeletedFalseOrderByCreatedAtDesc(
+            Long organizationId);
+
+    List<Event> findByOrganizerOrganizationIdAndStatusAndDeletedFalseOrderByCreatedAtDesc(
+            Long organizationId,
+            EventStatus status);
+            List<Event> findByStatusAndDeletedFalseOrderByStartDateTimeAsc(
+        EventStatus status);
+        Optional<Event> findByIdAndStatusAndDeletedFalse(
+        Long id,
+        EventStatus status);
 }

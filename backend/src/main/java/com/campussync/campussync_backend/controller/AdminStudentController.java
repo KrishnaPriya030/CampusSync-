@@ -101,7 +101,5 @@ public ResponseEntity<StudentListResponse> activateStudent(
             studentManagementService.activateStudent(id)
     );
 }
-
-
     
 }
