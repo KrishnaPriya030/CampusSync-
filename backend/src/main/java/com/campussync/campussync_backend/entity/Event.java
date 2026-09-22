@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.entity;
 
 import java.math.BigDecimal;
@@ -6,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.campussync.campussync_backend.enums.CapacityType;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.EventStatus;
 import com.campussync.campussync_backend.enums.PaymentType;
 
@@ -65,6 +65,20 @@ public class Event {
     @Column(nullable = false)
     private LocalDateTime registrationDeadline;
 
+    /*
+     * Determines which authority must approve the event.
+     *
+     * DEPARTMENT:
+     *     Department Head approval required.
+     *
+     * ORGANIZATION:
+     *     Organization Head approval required.
+     */
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EventScope scope;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -113,7 +127,32 @@ public class Event {
 
     private LocalDateTime updatedAt;
 
+    // ============================================================
+    // EVENT REMINDER TRACKING
+    // ============================================================
+
+    /*
+     * Prevents the 24-hour reminder from being
+     * sent more than once.
+     */
+    @Column(nullable = false)
+    private boolean reminder24HoursSent = false;
+
+    /*
+     * Prevents the 1-hour reminder from being
+     * sent more than once.
+     */
+    @Column(nullable = false)
+    private boolean reminder1HourSent = false;
+
+    // ============================================================
+    // RELATIONSHIPS
+    // ============================================================
+
     @OneToMany(mappedBy = "event")
     private List<EventRegistration> registrations;
-}
 
+    @ManyToOne
+    @JoinColumn(name = "certificate_template_id")
+    private CertificateTemplate certificateTemplate;
+}

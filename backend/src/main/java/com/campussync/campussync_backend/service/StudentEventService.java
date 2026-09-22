@@ -20,6 +20,10 @@ public class StudentEventService {
         this.eventRepository = eventRepository;
     }
 
+    // ============================================================
+    // GET ALL PUBLISHED EVENTS
+    // ============================================================
+
     public List<EventResponse> getPublishedEvents() {
 
         return eventRepository
@@ -29,43 +33,62 @@ public class StudentEventService {
                 .map(this::toResponse)
                 .toList();
     }
+
+    // ============================================================
+    // GET PUBLISHED EVENT
+    // ============================================================
+
     public EventResponse getPublishedEvent(Long eventId) {
 
-    Event event = eventRepository
-            .findByIdAndStatusAndDeletedFalse(
-                    eventId,
-                    EventStatus.PUBLISHED)
-            .orElseThrow(() ->
-                    new RuntimeException(
-                            "Published event not found"));
+        Event event = eventRepository
+                .findByIdAndStatusAndDeletedFalse(
+                        eventId,
+                        EventStatus.PUBLISHED)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Published event not found"));
 
-    return toResponse(event);
-}
+        return toResponse(event);
+    }
+
+    // ============================================================
+    // RESPONSE MAPPING
+    // ============================================================
 
     private EventResponse toResponse(Event event) {
 
         return new EventResponse(
                 event.getId(),
+
                 event.getOrganizer().getId(),
                 event.getOrganizer().getUser().getName(),
+
                 event.getOrganizer().getOrganization().getId(),
                 event.getOrganizer().getOrganization().getName(),
+
                 event.getTitle(),
                 event.getDescription(),
                 event.getVenue(),
+
                 event.getStartDateTime(),
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
+
+                // NEW: Event scope
+                event.getScope(),
+
                 event.getCapacityType(),
                 event.getCapacity(),
+
                 event.getPaymentType(),
                 event.getRegistrationFee(),
+
                 event.getRefundPolicy(),
+
                 event.isAttendanceEnabled(),
                 event.isCertificateEnabled(),
+
                 event.getStatus()
         );
-
-
     }
 }

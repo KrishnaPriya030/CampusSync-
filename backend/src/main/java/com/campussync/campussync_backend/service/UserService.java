@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.service;
 
 import org.springframework.security.core.Authentication;
@@ -42,6 +43,10 @@ public class UserService {
         );
     }
 
+    // ============================================================
+    // CHANGE PASSWORD - LOGGED IN USER
+    // ============================================================
+
     public void changePassword(ChangePasswordRequest request) {
 
         Authentication authentication =
@@ -74,16 +79,29 @@ public class UserService {
 
         user.setFirstLogin(false);
 
-        System.out.println(
-                "BEFORE SAVE - firstLogin = "
-                + user.isFirstLogin()
+        userRepository.save(user);
+    }
+
+    // ============================================================
+    // ADMIN RESET PASSWORD
+    // ============================================================
+
+    public void resetPasswordByAdmin(
+            Long userId,
+            String newPassword) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new RuntimeException("User not found"));
+
+        user.setPassword(
+                passwordEncoder.encode(newPassword)
         );
+
+        // Force the user to change the temporary password
+        // after logging in.
+        user.setFirstLogin(true);
 
         userRepository.save(user);
-
-        System.out.println(
-                "AFTER SAVE - firstLogin = "
-                + user.isFirstLogin()
-        );
     }
 }

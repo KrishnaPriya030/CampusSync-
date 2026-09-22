@@ -2,8 +2,8 @@
 package com.campussync.campussync_backend.service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -82,10 +82,12 @@ public class DepartmentHeadManagementService {
                     "This department already has a Department Head");
         }
 
+        // Initial password = Date of Birth (ddMMyyyy)
         String temporaryPassword =
-                UUID.randomUUID()
-                        .toString()
-                        .substring(0, 12);
+                request.getDateOfBirth()
+                        .format(
+                                DateTimeFormatter.ofPattern(
+                                        "ddMMyyyy"));
 
         String activationToken =
                 activationService.generateToken();
@@ -107,6 +109,8 @@ public class DepartmentHeadManagementService {
         user.setRole(Role.DEPARTMENT_HEAD);
         user.setStatus(UserStatus.ACTIVE);
         user.setCreatedAt(LocalDateTime.now());
+
+        // Force password change on first login
         user.setFirstLogin(true);
 
         user.setActivationTokenHash(

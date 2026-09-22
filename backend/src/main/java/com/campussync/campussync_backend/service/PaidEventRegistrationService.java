@@ -13,6 +13,7 @@ import com.campussync.campussync_backend.entity.Event;
 import com.campussync.campussync_backend.entity.EventRegistration;
 import com.campussync.campussync_backend.entity.Payment;
 import com.campussync.campussync_backend.entity.Student;
+import com.campussync.campussync_backend.enums.CapacityType;
 import com.campussync.campussync_backend.enums.EventRegistrationStatus;
 import com.campussync.campussync_backend.enums.EventStatus;
 import com.campussync.campussync_backend.enums.PaymentStatus;
@@ -56,29 +57,55 @@ public class PaidEventRegistrationService {
             Long userId,
             Long eventId) {
 
-        // Find the logged-in student's profile
+        // ========================================================
+        // FIND STUDENT
+        // ========================================================
+
         Student student = studentRepository.findByUserId(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("Student profile not found"));
+                        new RuntimeException(
+                                "Student profile not found"));
 
-        // Find the event
-        Event event = eventRepository.findByIdAndDeletedFalse(eventId)
+        // ========================================================
+        // LOCK EVENT ROW
+        // ========================================================
+
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() ->
-                        new RuntimeException("Event not found"));
+                        new RuntimeException(
+                                "Event not found"));
 
-        // Only published events can accept registrations
+        // ========================================================
+        // EVENT MUST EXIST AND NOT BE DELETED
+        // ========================================================
+
+        if (event.isDeleted()) {
+            throw new RuntimeException(
+                    "Event not found");
+        }
+
+        // ========================================================
+        // EVENT MUST BE PUBLISHED
+        // ========================================================
+
         if (event.getStatus() != EventStatus.PUBLISHED) {
             throw new RuntimeException(
                     "Registration is available only for published events");
         }
 
-        // Make sure this is a paid event
+        // ========================================================
+        // MUST BE A PAID EVENT
+        // ========================================================
+
         if (event.getPaymentType() != PaymentType.PAID) {
             throw new RuntimeException(
                     "This is not a paid event");
         }
 
-        // Check registration deadline
+        // ========================================================
+        // CHECK REGISTRATION DEADLINE
+        // ========================================================
+
         if (event.getRegistrationDeadline() != null
                 && LocalDateTime.now()
                         .isAfter(event.getRegistrationDeadline())) {
@@ -87,7 +114,10 @@ public class PaidEventRegistrationService {
                     "Registration deadline has passed");
         }
 
-        // Prevent duplicate registration
+        // ========================================================
+        // PREVENT DUPLICATE REGISTRATION
+        // ========================================================
+
         if (registrationRepository.existsByEventIdAndStudentId(
                 eventId,
                 student.getId())) {
@@ -96,9 +126,20 @@ public class PaidEventRegistrationService {
                     "Student is already registered for this event");
         }
 
-        // Check event capacity
-        if (event.getCapacityType() != null
-                && event.getCapacityType().name().equals("LIMITED")) {
+        // ========================================================
+        // CAPACITY CHECK
+        //
+        // PAYMENT_PENDING registrations also reserve seats.
+        // ========================================================
+
+        if (event.getCapacityType() == CapacityType.LIMITED) {
+
+            if (event.getCapacity() == null
+                    || event.getCapacity() <= 0) {
+
+                throw new RuntimeException(
+                        "Event capacity is invalid");
+            }
 
             long registeredCount =
                     registrationRepository.countByEventIdAndStatus(
@@ -110,16 +151,20 @@ public class PaidEventRegistrationService {
                             eventId,
                             EventRegistrationStatus.PAYMENT_PENDING);
 
-            if (event.getCapacity() != null
-                    && registeredCount + pendingCount
-                            >= event.getCapacity()) {
+            long reservedSeats =
+                    registeredCount + pendingCount;
+
+            if (reservedSeats >= event.getCapacity()) {
 
                 throw new RuntimeException(
                         "Event registration capacity is full");
             }
         }
 
-        // Get the event fee
+        // ========================================================
+        // GET EVENT FEE
+        // ========================================================
+
         BigDecimal amount = event.getRegistrationFee();
 
         if (amount == null
@@ -129,14 +174,12 @@ public class PaidEventRegistrationService {
                     "Paid event must have a valid registration fee");
         }
 
+        // ========================================================
+        // CREATE RAZORPAY ORDER
+        // ========================================================
+
         try {
 
-            /*
-             * Razorpay expects the amount in paise.
-             *
-             * Example:
-             * ₹500 = 50000 paise
-             */
             long amountInPaise = amount
                     .multiply(BigDecimal.valueOf(100))
                     .longValueExact();
@@ -145,13 +188,11 @@ public class PaidEventRegistrationService {
 
             orderRequest.put(
                     "amount",
-                    amountInPaise
-            );
+                    amountInPaise);
 
             orderRequest.put(
                     "currency",
-                    "INR"
-            );
+                    "INR");
 
             String receipt =
                     "CAMPUS_"
@@ -163,39 +204,46 @@ public class PaidEventRegistrationService {
 
             orderRequest.put(
                     "receipt",
-                    receipt
-            );
+                    receipt);
 
-            // Create Razorpay order
             Order order =
                     razorpayClient.orders.create(orderRequest);
 
-            // Create pending event registration
+            // ====================================================
+            // CREATE PAYMENT-PENDING REGISTRATION
+            // ====================================================
+
             EventRegistration registration =
                     new EventRegistration();
 
             registration.setEvent(event);
-
             registration.setStudent(student);
 
             registration.setStatus(
                     EventRegistrationStatus.PAYMENT_PENDING);
 
-            registration.setRegisteredAt(
-                    LocalDateTime.now());
+            LocalDateTime now =
+                    LocalDateTime.now();
+
+            registration.setRegisteredAt(now);
+
+            registration.setPaymentExpiresAt(
+                    now.plusMinutes(15));
 
             EventRegistration savedRegistration =
                     registrationRepository.save(registration);
 
-            // Create pending payment
+            // ====================================================
+            // CREATE PENDING PAYMENT
+            // ====================================================
+
             Payment payment =
                     new Payment();
 
             payment.setRegistration(
                     savedRegistration);
 
-            payment.setAmount(
-                    amount);
+            payment.setAmount(amount);
 
             payment.setStatus(
                     PaymentStatus.PENDING);
@@ -203,20 +251,21 @@ public class PaidEventRegistrationService {
             payment.setRazorpayOrderId(
                     order.get("id"));
 
-            payment.setCreatedAt(
-                    LocalDateTime.now());
+            payment.setCreatedAt(now);
 
             paymentRepository.save(payment);
 
-            // Send Razorpay order information to frontend
+            // ====================================================
+            // RETURN RAZORPAY ORDER DETAILS
+            // ====================================================
+
             return new RazorpayOrderResponse(
                     savedRegistration.getId(),
                     event.getId(),
                     amount,
                     "INR",
                     order.get("id"),
-                    razorpayKeyId
-            );
+                    razorpayKeyId);
 
         } catch (RazorpayException e) {
 

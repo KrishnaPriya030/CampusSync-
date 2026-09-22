@@ -16,6 +16,7 @@ import com.campussync.campussync_backend.entity.User;
 import com.campussync.campussync_backend.enums.CapacityType;
 import com.campussync.campussync_backend.enums.EventRegistrationStatus;
 import com.campussync.campussync_backend.enums.EventStatus;
+import com.campussync.campussync_backend.enums.NotificationType;
 import com.campussync.campussync_backend.enums.PaymentType;
 import com.campussync.campussync_backend.repository.EventRegistrationRepository;
 import com.campussync.campussync_backend.repository.EventRepository;
@@ -27,15 +28,18 @@ public class EventRegistrationService {
     private final EventRepository eventRepository;
     private final StudentRepository studentRepository;
     private final EventRegistrationRepository registrationRepository;
+    private final NotificationService notificationService;
 
     public EventRegistrationService(
             EventRepository eventRepository,
             StudentRepository studentRepository,
-            EventRegistrationRepository registrationRepository) {
+            EventRegistrationRepository registrationRepository,
+            NotificationService notificationService) {
 
         this.eventRepository = eventRepository;
         this.studentRepository = studentRepository;
         this.registrationRepository = registrationRepository;
+        this.notificationService = notificationService;
     }
 
     // ============================================================
@@ -233,6 +237,27 @@ public class EventRegistrationService {
                     "Student is already registered for this event");
         }
 
+        // ========================================================
+        // REGISTRATION CONFIRMED NOTIFICATION
+        //
+        // Only free events reach REGISTERED status here.
+        // Paid events will be notified after Razorpay verification.
+        // ========================================================
+
+        if (registration.getStatus() ==
+                EventRegistrationStatus.REGISTERED) {
+
+            notificationService.createNotification(
+                    userId,
+                    "Registration Confirmed",
+                    "You have successfully registered for the event \""
+                            + event.getTitle()
+                            + "\".",
+                    NotificationType.REGISTRATION_CONFIRMED,
+                    event
+            );
+        }
+
         return toResponse(registration);
     }
 
@@ -377,4 +402,4 @@ public class EventRegistrationService {
                 registration.getRegisteredAt()
         );
     }
-}   
+}

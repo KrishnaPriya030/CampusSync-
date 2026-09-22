@@ -1,52 +1,57 @@
+
 package com.campussync.campussync_backend.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.campussync.campussync_backend.enums.CapacityType;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.PaymentType;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record CreateEventRequest(
 
-        @NotBlank
+        @NotBlank(message = "Title is required")
         String title,
 
-        @NotBlank
+        @NotBlank(message = "Description is required")
         String description,
 
-        @NotBlank
+        @NotBlank(message = "Venue is required")
         String venue,
 
-        @NotNull
+        @NotNull(message = "Start date and time is required")
         LocalDateTime startDateTime,
 
-        @NotNull
+        @NotNull(message = "End date and time is required")
         LocalDateTime endDateTime,
 
-        @NotNull
+        @NotNull(message = "Registration deadline is required")
         LocalDateTime registrationDeadline,
 
-        @NotNull
+        @NotNull(message = "Event scope is required")
+        EventScope scope,
+
+        @NotNull(message = "Capacity type is required")
         CapacityType capacityType,
 
         Integer capacity,
 
-        @NotNull
+        @NotNull(message = "Payment type is required")
         PaymentType paymentType,
 
-        @NotNull
-        @DecimalMin(value = "0.00")
+        @NotNull(message = "Registration fee is required")
         BigDecimal registrationFee,
 
         String refundPolicy,
 
         boolean attendanceEnabled,
 
-        boolean certificateEnabled
+        boolean certificateEnabled,
 
+        Long certificateTemplateId
 ) {
 }
+

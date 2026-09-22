@@ -1,17 +1,21 @@
+
 package com.campussync.campussync_backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 
 public class ResetPasswordRequest {
 
-    @NotBlank
+    @NotBlank(message = "Reset token is required")
     private String token;
 
-    @NotBlank
+    @NotBlank(message = "New password is required")
     private String newPassword;
 
-    @NotBlank
+    @NotBlank(message = "Confirm password is required")
     private String confirmPassword;
+
+    public ResetPasswordRequest() {
+    }
 
     public String getToken() {
         return token;
@@ -37,3 +41,4 @@ public class ResetPasswordRequest {
         this.confirmPassword = confirmPassword;
     }
 }
+

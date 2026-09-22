@@ -1,8 +1,10 @@
 package com.campussync.campussync_backend.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,11 +15,14 @@ import com.campussync.campussync_backend.entity.Payment;
 import com.campussync.campussync_backend.entity.Refund;
 import com.campussync.campussync_backend.entity.Student;
 import com.campussync.campussync_backend.enums.EventRegistrationStatus;
+import com.campussync.campussync_backend.enums.NotificationType;
 import com.campussync.campussync_backend.enums.PaymentStatus;
 import com.campussync.campussync_backend.enums.RefundStatus;
 import com.campussync.campussync_backend.repository.PaymentRepository;
 import com.campussync.campussync_backend.repository.RefundRepository;
 import com.campussync.campussync_backend.repository.StudentRepository;
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
 
 @Service
 public class RefundService {
@@ -25,19 +30,25 @@ public class RefundService {
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
+    private final RazorpayClient razorpayClient;
+    private final NotificationService notificationService;
 
     public RefundService(
             RefundRepository refundRepository,
             PaymentRepository paymentRepository,
-            StudentRepository studentRepository) {
+            StudentRepository studentRepository,
+            RazorpayClient razorpayClient,
+            NotificationService notificationService) {
 
         this.refundRepository = refundRepository;
         this.paymentRepository = paymentRepository;
         this.studentRepository = studentRepository;
+        this.razorpayClient = razorpayClient;
+        this.notificationService = notificationService;
     }
 
     // ============================================================
-    // STUDENT REQUEST REFUND
+    // STUDENT: REQUEST REFUND
     // ============================================================
 
     @Transactional
@@ -76,6 +87,17 @@ public class RefundService {
                     "Only paid payments can be refunded");
         }
 
+        /*
+         * A real Razorpay payment ID is required
+         * for processing the refund.
+         */
+        if (payment.getRazorpayPaymentId() == null ||
+                payment.getRazorpayPaymentId().isBlank()) {
+
+            throw new RuntimeException(
+                    "Razorpay payment ID not found");
+        }
+
         Refund existing =
                 refundRepository
                         .findByPaymentId(paymentId)
@@ -90,11 +112,9 @@ public class RefundService {
         /*
          * Check the refund policy stored on the event.
          *
-         * The actual policy interpretation will be handled
-         * as part of the event's configured policy.
-         *
-         * For now we require the event to have a policy
-         * before allowing a refund request.
+         * The current implementation only checks that
+         * a refund policy exists. It does not interpret
+         * the policy text automatically.
          */
         String policy =
                 registration.getEvent()
@@ -127,7 +147,8 @@ public class RefundService {
         refundRepository.save(refund);
 
         /*
-         * Mark payment as refund pending.
+         * Payment is now waiting for organizer
+         * refund processing.
          */
         payment.setStatus(
                 PaymentStatus.REFUND_PENDING);
@@ -197,6 +218,10 @@ public class RefundService {
         EventRegistration registration =
                 payment.getRegistration();
 
+        /*
+         * Only the organizer who owns the event
+         * can approve the refund.
+         */
         if (!registration.getEvent()
                 .getOrganizer()
                 .getUser()
@@ -214,35 +239,125 @@ public class RefundService {
                     "Refund is not pending");
         }
 
-        refund.setStatus(
-                RefundStatus.APPROVED);
+        if (payment.getStatus() !=
+                PaymentStatus.REFUND_PENDING) {
 
-        refund.setProcessingNote(
-                processingNote);
-
-        refund.setProcessedAt(
-                LocalDateTime.now());
-
-        refundRepository.save(refund);
+            throw new RuntimeException(
+                    "Payment is not awaiting refund");
+        }
 
         /*
-         * The actual money transfer is not performed by
-         * CampusSync in the manual QR/UTR model.
-         *
-         * We record the approved refund.
+         * Razorpay payment ID is required to create
+         * the actual refund.
          */
-        payment.setStatus(
-                PaymentStatus.REFUNDED);
+        String razorpayPaymentId =
+                payment.getRazorpayPaymentId();
 
-        payment.setUpdatedAt(
-                LocalDateTime.now());
+        if (razorpayPaymentId == null ||
+                razorpayPaymentId.isBlank()) {
 
-        paymentRepository.save(payment);
+            throw new RuntimeException(
+                    "Razorpay payment ID not found");
+        }
 
-        registration.setStatus(
-                EventRegistrationStatus.REFUNDED);
+        /*
+         * Amount in our database is stored in RUPEES.
+         *
+         * Razorpay expects the refund amount in PAISE.
+         *
+         * Example:
+         * ₹100.00 -> 10000 paise
+         */
+        BigDecimal amountInRupees =
+                refund.getAmount();
 
-        return toResponse(refund);
+        long amountInPaise =
+                amountInRupees
+                        .movePointRight(2)
+                        .longValueExact();
+
+        try {
+
+            /*
+             * Create Razorpay refund request.
+             */
+            JSONObject refundRequest =
+                    new JSONObject();
+
+            refundRequest.put(
+                    "amount",
+                    amountInPaise);
+
+            /*
+             * Create the actual refund in Razorpay.
+             */
+            com.razorpay.Refund razorpayRefund =
+                    razorpayClient
+                            .payments
+                            .refund(
+                                    razorpayPaymentId,
+                                    refundRequest);
+
+            /*
+             * Razorpay successfully accepted the refund.
+             *
+             * We now update our local database.
+             */
+            refund.setStatus(
+                    RefundStatus.COMPLETED);
+
+            refund.setProcessingNote(
+                    processingNote);
+
+            refund.setProcessedAt(
+                    LocalDateTime.now());
+
+            refundRepository.save(refund);
+
+            payment.setStatus(
+                    PaymentStatus.REFUNDED);
+
+            payment.setUpdatedAt(
+                    LocalDateTime.now());
+
+            paymentRepository.save(payment);
+
+            registration.setStatus(
+                    EventRegistrationStatus.REFUNDED);
+
+            /*
+             * Notify the student only after the
+             * Razorpay refund was successfully accepted.
+             */
+            notificationService.createNotification(
+                    registration.getStudent()
+                            .getUser()
+                            .getId(),
+                    "Refund Processed",
+                    "Your refund of ₹"
+                            + refund.getAmount()
+                            + " for the event \""
+                            + registration.getEvent()
+                                    .getTitle()
+                            + "\" has been processed successfully.",
+                    NotificationType.REFUND_PROCESSED,
+                    registration.getEvent()
+            );
+
+            return toResponse(refund);
+
+        } catch (RazorpayException e) {
+
+            /*
+             * Razorpay rejected/failed the refund.
+             *
+             * Do NOT mark the payment as REFUNDED.
+             */
+            throw new RuntimeException(
+                    "Razorpay refund failed: "
+                            + e.getMessage(),
+                    e);
+        }
     }
 
     // ============================================================
@@ -284,6 +399,13 @@ public class RefundService {
                     "Refund is not pending");
         }
 
+        if (payment.getStatus() !=
+                PaymentStatus.REFUND_PENDING) {
+
+            throw new RuntimeException(
+                    "Payment is not awaiting refund");
+        }
+
         refund.setStatus(
                 RefundStatus.REJECTED);
 
@@ -296,8 +418,8 @@ public class RefundService {
         refundRepository.save(refund);
 
         /*
-         * Payment becomes paid again because the refund
-         * request was rejected.
+         * Refund was rejected, so the original payment
+         * remains successful.
          */
         payment.setStatus(
                 PaymentStatus.PAID);

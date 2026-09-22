@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.service;
 
 import java.time.LocalDateTime;
@@ -10,10 +9,10 @@ import com.campussync.campussync_backend.dto.EventResponse;
 import com.campussync.campussync_backend.entity.DepartmentHead;
 import com.campussync.campussync_backend.entity.Event;
 import com.campussync.campussync_backend.entity.Organization;
+import com.campussync.campussync_backend.enums.EventScope;
+import com.campussync.campussync_backend.enums.EventStatus;
 import com.campussync.campussync_backend.repository.DepartmentHeadRepository;
 import com.campussync.campussync_backend.repository.EventRepository;
-
-import com.campussync.campussync_backend.enums.EventStatus;
 
 @Service
 public class DepartmentHeadEventApprovalService {
@@ -26,8 +25,7 @@ public class DepartmentHeadEventApprovalService {
             DepartmentHeadRepository departmentHeadRepository) {
 
         this.eventRepository = eventRepository;
-        this.departmentHeadRepository =
-                departmentHeadRepository;
+        this.departmentHeadRepository = departmentHeadRepository;
     }
 
     // ============================================================
@@ -153,6 +151,19 @@ public class DepartmentHeadEventApprovalService {
             DepartmentHead head,
             Event event) {
 
+        /*
+         * The event itself must explicitly be
+         * DEPARTMENT scoped.
+         *
+         * An ORGANIZATION-scoped event must never
+         * be approved by a Department Head.
+         */
+        if (event.getScope() != EventScope.DEPARTMENT) {
+
+            throw new RuntimeException(
+                    "This event is not department-scoped");
+        }
+
         Organization organization =
                 event.getOrganizer()
                         .getOrganization();
@@ -164,14 +175,24 @@ public class DepartmentHeadEventApprovalService {
         }
 
         /*
-         * A Department Head can approve only events
-         * belonging to an organization associated
-         * with that Department.
+         * A Department-scoped event requires the
+         * Organizer's organization to belong to
+         * a department.
          */
         if (organization.getDepartment() == null) {
 
             throw new RuntimeException(
-                    "This is not a department-related event");
+                    "This department-scoped event has no associated department");
+        }
+
+        /*
+         * The Department Head can approve only events
+         * belonging to their own department.
+         */
+        if (head.getDepartment() == null) {
+
+            throw new RuntimeException(
+                    "Department Head is not associated with a department");
         }
 
         if (!organization.getDepartment()
@@ -205,6 +226,7 @@ public class DepartmentHeadEventApprovalService {
                 event.getStartDateTime(),
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
+                event.getScope(),
                 event.getCapacityType(),
                 event.getCapacity(),
                 event.getPaymentType(),

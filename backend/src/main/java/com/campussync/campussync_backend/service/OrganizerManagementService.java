@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.service;
 
 import java.time.LocalDateTime;
@@ -250,6 +251,41 @@ public class OrganizerManagementService {
     }
 
     // ============================================================
+    // ADMIN RESET ORGANIZER PASSWORD
+    // ============================================================
+
+    @Transactional
+    public void resetPassword(
+            Long organizerId,
+            String newPassword) {
+
+        Organizer organizer =
+                organizerRepository.findById(organizerId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Organizer not found"));
+
+        User user = organizer.getUser();
+
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new RuntimeException(
+                    "Cannot reset password for a blocked organizer");
+        }
+
+        user.setPassword(
+                passwordEncoder.encode(newPassword)
+        );
+
+        /*
+         * Force the organizer to change the
+         * temporary password after login.
+         */
+        user.setFirstLogin(true);
+
+        userRepository.save(user);
+    }
+
+    // ============================================================
     // ORGANIZER ACCOUNT ACTIVATION
     // ============================================================
 
@@ -304,21 +340,23 @@ public class OrganizerManagementService {
         /*
          * Make sure this is an organizer account.
          */
-       if (user.getRole() != Role.ORGANIZER
-        && user.getRole() != Role.DEPARTMENT_HEAD
-        && user.getRole() != Role.ORGANIZATION_HEAD) {
-    throw new RuntimeException(
-            "Invalid account activation");
-}
+        if (user.getRole() != Role.ORGANIZER
+                && user.getRole() != Role.DEPARTMENT_HEAD
+                && user.getRole() != Role.ORGANIZATION_HEAD) {
+
+            throw new RuntimeException(
+                    "Invalid account activation");
+        }
 
         /*
-         * Make sure the organizer account has
+         * Make sure the account has
          * not been blocked by the admin.
          */
-       if (user.getStatus() == UserStatus.BLOCKED) {
-    throw new RuntimeException(
-            "Account is blocked");
-}
+        if (user.getStatus() == UserStatus.BLOCKED) {
+
+            throw new RuntimeException(
+                    "Account is blocked");
+        }
 
         /*
          * Set the organizer's real password.
@@ -360,16 +398,17 @@ public class OrganizerManagementService {
                 organizer.getOrganization();
 
         return new OrganizerResponse(
-        organizer.getId(),
-        user.getId(),
-        user.getName(),
-        user.getEmail(),
-        user.getPhoneNumber(),
-        organization.getId(),
-        organization.getName(),
-        organizer.getDesignation(),
-        user.getStatus().name(),
-        user.isFirstLogin()
-);
+                organizer.getId(),
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPhoneNumber(),
+                organization.getId(),
+                organization.getName(),
+                organizer.getDesignation(),
+                user.getStatus().name(),
+                user.isFirstLogin()
+        );
     }
 }
+

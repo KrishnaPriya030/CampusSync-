@@ -9,8 +9,10 @@ import com.campussync.campussync_backend.dto.EventRegistrationResponse;
 import com.campussync.campussync_backend.entity.Event;
 import com.campussync.campussync_backend.entity.EventRegistration;
 import com.campussync.campussync_backend.entity.Student;
+import com.campussync.campussync_backend.enums.CapacityType;
 import com.campussync.campussync_backend.enums.EventRegistrationStatus;
 import com.campussync.campussync_backend.enums.EventStatus;
+import com.campussync.campussync_backend.enums.PaymentType;
 import com.campussync.campussync_backend.repository.EventRegistrationRepository;
 import com.campussync.campussync_backend.repository.EventRepository;
 import com.campussync.campussync_backend.repository.StudentRepository;
@@ -37,23 +39,42 @@ public class StudentRegistrationService {
             Long userId,
             Long eventId) {
 
-        // Find the student belonging to the logged-in user
+        // ========================================================
+        // FIND STUDENT
+        // ========================================================
+
         Student student = studentRepository.findByUserId(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("Student profile not found"));
+                        new RuntimeException(
+                                "Student profile not found"));
 
-        // Find the event
-        Event event = eventRepository.findByIdAndDeletedFalse(eventId)
+        // ========================================================
+        // LOCK EVENT ROW
+        // ========================================================
+
+        Event event = eventRepository.findByIdForUpdate(eventId)
                 .orElseThrow(() ->
-                        new RuntimeException("Event not found"));
+                        new RuntimeException(
+                                "Event not found"));
 
-        // Only published events can be registered for
+        // ========================================================
+        // EVENT MUST BE PUBLISHED
+        // ========================================================
+
+        if (event.isDeleted()) {
+            throw new RuntimeException(
+                    "Event not found");
+        }
+
         if (event.getStatus() != EventStatus.PUBLISHED) {
             throw new RuntimeException(
                     "Registration is available only for published events");
         }
 
-        // Check registration deadline
+        // ========================================================
+        // CHECK REGISTRATION DEADLINE
+        // ========================================================
+
         if (event.getRegistrationDeadline() != null
                 && LocalDateTime.now()
                         .isAfter(event.getRegistrationDeadline())) {
@@ -62,7 +83,20 @@ public class StudentRegistrationService {
                     "Registration deadline has passed");
         }
 
-        // Prevent duplicate registration
+        // ========================================================
+        // FREE EVENT ONLY
+        // ========================================================
+
+        if (event.getPaymentType() != PaymentType.FREE) {
+
+            throw new RuntimeException(
+                    "Paid event registration will be handled through payment");
+        }
+
+        // ========================================================
+        // PREVENT DUPLICATE REGISTRATION
+        // ========================================================
+
         if (registrationRepository.existsByEventIdAndStudentId(
                 eventId,
                 student.getId())) {
@@ -71,45 +105,80 @@ public class StudentRegistrationService {
                     "Student is already registered for this event");
         }
 
-        // Check capacity for limited events
-        if (event.getCapacityType() != null
-                && event.getCapacityType().name().equals("LIMITED")) {
+        // ========================================================
+        // CAPACITY CHECK
+        // ========================================================
+
+        if (event.getCapacityType() == CapacityType.LIMITED) {
+
+            if (event.getCapacity() == null
+                    || event.getCapacity() <= 0) {
+
+                throw new RuntimeException(
+                        "Event capacity is invalid");
+            }
 
             long registeredCount =
                     registrationRepository.countByEventIdAndStatus(
                             eventId,
                             EventRegistrationStatus.REGISTERED);
 
-            if (event.getCapacity() != null
-                    && registeredCount >= event.getCapacity()) {
+            if (registeredCount >= event.getCapacity()) {
 
                 throw new RuntimeException(
                         "Event registration capacity is full");
             }
         }
 
-        // First version: handle FREE events only
-        if (event.getPaymentType() == null
-                || !event.getPaymentType().name().equals("FREE")) {
+        // ========================================================
+        // CREATE REGISTRATION
+        // ========================================================
 
-            throw new RuntimeException(
-                    "Paid event registration will be handled through payment");
-        }
-
-        // Create registration
-        EventRegistration registration = new EventRegistration();
+        EventRegistration registration =
+                new EventRegistration();
 
         registration.setEvent(event);
         registration.setStudent(student);
-        registration.setStatus(EventRegistrationStatus.REGISTERED);
-        registration.setRegisteredAt(LocalDateTime.now());
-        registration.setConfirmedAt(LocalDateTime.now());
+
+        registration.setStatus(
+                EventRegistrationStatus.REGISTERED);
+
+        registration.setRegisteredAt(
+                LocalDateTime.now());
+
+        registration.setConfirmedAt(
+                LocalDateTime.now());
 
         EventRegistration saved =
                 registrationRepository.save(registration);
 
         return toResponse(saved);
     }
+
+    // ============================================================
+    // GET MY REGISTRATIONS
+    // ============================================================
+
+    @Transactional(readOnly = true)
+    public java.util.List<EventRegistrationResponse> getMyRegistrations(
+            Long userId) {
+
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Student profile not found"));
+
+        return registrationRepository
+                .findByStudentIdOrderByRegisteredAtDesc(
+                        student.getId())
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // ============================================================
+    // RESPONSE MAPPER
+    // ============================================================
 
     private EventRegistrationResponse toResponse(
             EventRegistration registration) {
@@ -144,18 +213,4 @@ public class StudentRegistrationService {
                 registration.getRegisteredAt()
         );
     }
-    @Transactional(readOnly = true)
-public java.util.List<EventRegistrationResponse> getMyRegistrations(
-        Long userId) {
-
-    Student student = studentRepository.findByUserId(userId)
-            .orElseThrow(() ->
-                    new RuntimeException("Student profile not found"));
-
-    return registrationRepository
-            .findByStudentIdOrderByRegisteredAtDesc(student.getId())
-            .stream()
-            .map(this::toResponse)
-            .toList();
-}
 }

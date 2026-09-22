@@ -1,9 +1,11 @@
+        
 package com.campussync.campussync_backend.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.campussync.campussync_backend.enums.CapacityType;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.PaymentType;
 
 import jakarta.validation.constraints.DecimalMin;
@@ -31,6 +33,9 @@ public record UpdateEventRequest(
         LocalDateTime registrationDeadline,
 
         @NotNull
+        EventScope scope,
+
+        @NotNull
         CapacityType capacityType,
 
         Integer capacity,
@@ -46,7 +51,10 @@ public record UpdateEventRequest(
 
         boolean attendanceEnabled,
 
-        boolean certificateEnabled
+        boolean certificateEnabled,
+
+        Long certificateTemplateId
 
 ) {
 }
+

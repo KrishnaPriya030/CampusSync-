@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import com.campussync.campussync_backend.enums.CapacityType;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.EventStatus;
+
 import com.campussync.campussync_backend.enums.PaymentType;
 
 public record EventResponse(
@@ -30,6 +32,8 @@ public record EventResponse(
         LocalDateTime endDateTime,
 
         LocalDateTime registrationDeadline,
+
+        EventScope scope,
 
         CapacityType capacityType,
 

@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.service;
 
 import java.util.List;
@@ -79,32 +78,40 @@ public class OrganizationHeadEventService {
     // EVENT RESPONSE MAPPING
     // ============================================================
 
-    
-private EventResponse toResponse(Event event) {
+    private EventResponse toResponse(Event event) {
 
-    return new EventResponse(
-            event.getId(),
-            event.getOrganizer().getId(),
-            event.getOrganizer().getUser().getName(),
-            event.getOrganizer().getOrganization().getId(),
-            event.getOrganizer().getOrganization().getName(),
-            event.getTitle(),
-            event.getDescription(),
-            event.getVenue(),
-            event.getStartDateTime(),
-            event.getEndDateTime(),
-            event.getRegistrationDeadline(),
-            event.getCapacityType(),
-            event.getCapacity(),
-            event.getPaymentType(),
-            event.getRegistrationFee(),
-            event.getRefundPolicy(),
-            event.isAttendanceEnabled(),
-            event.isCertificateEnabled(),
-            event.getStatus()
-    );
+        return new EventResponse(
+                event.getId(),
+
+                event.getOrganizer().getId(),
+                event.getOrganizer().getUser().getName(),
+
+                event.getOrganizer().getOrganization().getId(),
+                event.getOrganizer().getOrganization().getName(),
+
+                event.getTitle(),
+                event.getDescription(),
+                event.getVenue(),
+
+                event.getStartDateTime(),
+                event.getEndDateTime(),
+                event.getRegistrationDeadline(),
+
+                // NEW: Event scope
+                event.getScope(),
+
+                event.getCapacityType(),
+                event.getCapacity(),
+
+                event.getPaymentType(),
+                event.getRegistrationFee(),
+
+                event.getRefundPolicy(),
+
+                event.isAttendanceEnabled(),
+                event.isCertificateEnabled(),
+
+                event.getStatus()
+        );
+    }
 }
-
-
-}
-

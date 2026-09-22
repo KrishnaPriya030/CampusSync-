@@ -44,6 +44,7 @@ public class SecurityConfig {
                 // Public authentication endpoints
                 .requestMatchers("/api/auth/**")
                 .permitAll()
+                .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/error")
 .permitAll()
 

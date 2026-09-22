@@ -1,4 +1,7 @@
+
 package com.campussync.campussync_backend.dto;
+
+import java.time.LocalDate;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,6 +17,9 @@ public class CreateDepartmentHeadRequest {
     private String email;
 
     private String phoneNumber;
+
+    @NotNull
+    private LocalDate dateOfBirth;
 
     @NotNull
     private Long departmentId;
@@ -45,6 +51,14 @@ public class CreateDepartmentHeadRequest {
         this.phoneNumber = phoneNumber;
     }
 
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
     public Long getDepartmentId() {
         return departmentId;
     }
@@ -61,3 +75,4 @@ public class CreateDepartmentHeadRequest {
         this.designation = designation;
     }
 }
+

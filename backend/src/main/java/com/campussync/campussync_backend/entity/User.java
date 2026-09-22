@@ -1,5 +1,7 @@
+
 package com.campussync.campussync_backend.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
@@ -16,9 +18,9 @@ import jakarta.validation.constraints.NotNull;
 
 import com.campussync.campussync_backend.enums.Role;
 import com.campussync.campussync_backend.enums.UserStatus;
+
 import lombok.Getter;
 import lombok.Setter;
-
 
 @Entity
 @Table(name = "users")
@@ -48,6 +50,9 @@ public class User {
 
     private String phoneNumber;
 
+    // Date of Birth
+    private LocalDate dateOfBirth;
+
     @NotNull
     @Enumerated(EnumType.STRING)
     private Role role;
@@ -75,3 +80,4 @@ public class User {
 
     private boolean passwordResetTokenUsed = false;
 }
+

@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.service;
 
 import java.math.BigDecimal;
@@ -11,26 +10,41 @@ import org.springframework.transaction.annotation.Transactional;
 import com.campussync.campussync_backend.dto.CreateEventRequest;
 import com.campussync.campussync_backend.dto.EventResponse;
 import com.campussync.campussync_backend.dto.UpdateEventRequest;
+import com.campussync.campussync_backend.entity.CertificateTemplate;
 import com.campussync.campussync_backend.entity.Event;
 import com.campussync.campussync_backend.entity.Organizer;
 import com.campussync.campussync_backend.enums.CapacityType;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.EventStatus;
+import com.campussync.campussync_backend.enums.NotificationType;
 import com.campussync.campussync_backend.enums.PaymentType;
+import com.campussync.campussync_backend.repository.CertificateTemplateRepository;
 import com.campussync.campussync_backend.repository.EventRepository;
 import com.campussync.campussync_backend.repository.OrganizerRepository;
+import com.campussync.campussync_backend.repository.OrganizationRepository;
 
 @Service
 public class OrganizerEventService {
 
     private final EventRepository eventRepository;
     private final OrganizerRepository organizerRepository;
+    private final OrganizationRepository organizationRepository;
+    private final CertificateTemplateRepository certificateTemplateRepository;
+    private final NotificationService notificationService;
 
     public OrganizerEventService(
             EventRepository eventRepository,
-            OrganizerRepository organizerRepository) {
+            OrganizerRepository organizerRepository,
+            OrganizationRepository organizationRepository,
+            CertificateTemplateRepository certificateTemplateRepository,
+            NotificationService notificationService) {
 
         this.eventRepository = eventRepository;
         this.organizerRepository = organizerRepository;
+        this.organizationRepository = organizationRepository;
+        this.certificateTemplateRepository =
+                certificateTemplateRepository;
+        this.notificationService = notificationService;
     }
 
     // ============================================================
@@ -57,16 +71,33 @@ public class OrganizerEventService {
         Organizer organizer =
                 getOrganizerByUserId(userId);
 
+        // ========================================================
+        // EVENT SCOPE VALIDATION
+        // ========================================================
+
+        validateEventScope(
+                organizer,
+                request.scope()
+        );
+
         Event event = new Event();
 
         event.setOrganizer(organizer);
         event.setTitle(request.title());
         event.setDescription(request.description());
         event.setVenue(request.venue());
-        event.setStartDateTime(request.startDateTime());
-        event.setEndDateTime(request.endDateTime());
+
+        event.setStartDateTime(
+                request.startDateTime());
+
+        event.setEndDateTime(
+                request.endDateTime());
+
         event.setRegistrationDeadline(
                 request.registrationDeadline());
+
+        event.setScope(
+                request.scope());
 
         event.setCapacityType(
                 request.capacityType());
@@ -95,13 +126,47 @@ public class OrganizerEventService {
         event.setCertificateEnabled(
                 request.certificateEnabled());
 
-        event.setStatus(EventStatus.DRAFT);
+        // ========================================================
+        // CERTIFICATE TEMPLATE
+        // ========================================================
+
+        if (request.certificateEnabled()) {
+
+            if (request.certificateTemplateId() == null) {
+
+                throw new RuntimeException(
+                        "Certificate template is required when certificates are enabled");
+            }
+
+            CertificateTemplate template =
+                    certificateTemplateRepository
+                            .findById(
+                                    request.certificateTemplateId())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Certificate template not found"));
+
+            event.setCertificateTemplate(template);
+
+        } else {
+
+            event.setCertificateTemplate(null);
+        }
+
+        event.setStatus(
+                EventStatus.DRAFT);
+
         event.setApprovedBy(null);
         event.setApprovedAt(null);
         event.setRejectionReason(null);
+
         event.setDeleted(false);
-        event.setCreatedAt(LocalDateTime.now());
-        event.setUpdatedAt(LocalDateTime.now());
+
+        event.setCreatedAt(
+                LocalDateTime.now());
+
+        event.setUpdatedAt(
+                LocalDateTime.now());
 
         return toResponse(
                 eventRepository.save(event));
@@ -167,28 +232,46 @@ public class OrganizerEventService {
                 getOwnedEvent(userId, eventId);
 
         /*
-         * Only DRAFT and REJECTED events can be edited.
+         * DRAFT and REJECTED events can be edited normally.
          *
-         * Once an event has been submitted for approval,
-         * approved, or published, the Organizer cannot
-         * modify it through this endpoint.
+         * PUBLISHED events can also be updated because
+         * registered students must be informed when
+         * published event details change.
+         *
+         * PENDING_APPROVAL and APPROVED events cannot be
+         * edited directly.
          */
         if (event.getStatus() != EventStatus.DRAFT
-                && event.getStatus() != EventStatus.REJECTED) {
+                && event.getStatus() != EventStatus.REJECTED
+                && event.getStatus() != EventStatus.PUBLISHED) {
 
             throw new RuntimeException(
-                    "Only draft or rejected events can be edited");
+                    "Only draft, rejected, or published events can be edited");
         }
+
+        boolean wasPublished =
+                event.getStatus() == EventStatus.PUBLISHED;
+
+        validateEventScope(
+                event.getOrganizer(),
+                request.scope()
+        );
 
         event.setTitle(request.title());
         event.setDescription(request.description());
         event.setVenue(request.venue());
+
         event.setStartDateTime(
                 request.startDateTime());
+
         event.setEndDateTime(
                 request.endDateTime());
+
         event.setRegistrationDeadline(
                 request.registrationDeadline());
+
+        event.setScope(
+                request.scope());
 
         event.setCapacityType(
                 request.capacityType());
@@ -217,14 +300,57 @@ public class OrganizerEventService {
         event.setCertificateEnabled(
                 request.certificateEnabled());
 
-        /*
-         * If a rejected event is edited, keep it rejected
-         * until the Organizer explicitly submits it again.
-         */
-        event.setUpdatedAt(LocalDateTime.now());
+        // ========================================================
+        // CERTIFICATE TEMPLATE
+        // ========================================================
 
-        return toResponse(
-                eventRepository.save(event));
+        if (request.certificateEnabled()) {
+
+            if (request.certificateTemplateId() == null) {
+
+                throw new RuntimeException(
+                        "Certificate template is required when certificates are enabled");
+            }
+
+            CertificateTemplate template =
+                    certificateTemplateRepository
+                            .findById(
+                                    request.certificateTemplateId())
+                            .orElseThrow(() ->
+                                    new RuntimeException(
+                                            "Certificate template not found"));
+
+            event.setCertificateTemplate(template);
+
+        } else {
+
+            event.setCertificateTemplate(null);
+        }
+
+        event.setUpdatedAt(
+                LocalDateTime.now());
+
+        Event savedEvent =
+                eventRepository.save(event);
+
+        // ========================================================
+        // PUBLISHED EVENT UPDATED NOTIFICATION
+        // ========================================================
+
+        if (wasPublished) {
+
+            notificationService.notifyRegisteredStudents(
+                    savedEvent.getId(),
+                    "Event Updated",
+                    "The event \""
+                            + savedEvent.getTitle()
+                            + "\" has been updated. Please check the latest event details.",
+                    NotificationType.EVENT_UPDATED,
+                    savedEvent
+            );
+        }
+
+        return toResponse(savedEvent);
     }
 
     // ============================================================
@@ -258,6 +384,32 @@ public class OrganizerEventService {
         }
 
         /*
+         * Make sure an existing/legacy event has a valid scope
+         * before entering an approval cycle.
+         */
+        if (event.getScope() == null) {
+
+            throw new RuntimeException(
+                    "Event scope must be selected before submitting for approval");
+        }
+
+        validateEventScope(
+                event.getOrganizer(),
+                event.getScope()
+        );
+
+        /*
+         * If certificates are enabled, make sure the event
+         * has a certificate template before approval.
+         */
+        if (event.isCertificateEnabled()
+                && event.getCertificateTemplate() == null) {
+
+            throw new RuntimeException(
+                    "Certificate template is required when certificates are enabled");
+        }
+
+        /*
          * A new approval cycle starts here.
          */
         event.setStatus(
@@ -266,14 +418,16 @@ public class OrganizerEventService {
         event.setApprovedBy(null);
         event.setApprovedAt(null);
         event.setRejectionReason(null);
-        event.setUpdatedAt(LocalDateTime.now());
+
+        event.setUpdatedAt(
+                LocalDateTime.now());
 
         return toResponse(
                 eventRepository.save(event));
     }
 
     // ============================================================
-    // DELETE
+    // DELETE EVENT
     // ============================================================
 
     @Transactional
@@ -292,9 +446,57 @@ public class OrganizerEventService {
          * attendance and certificates may reference it.
          */
         event.setDeleted(true);
-        event.setUpdatedAt(LocalDateTime.now());
+        event.setUpdatedAt(
+                LocalDateTime.now());
 
         eventRepository.save(event);
+    }
+
+    // ============================================================
+    // CANCEL EVENT
+    // ============================================================
+
+    @Transactional
+    public EventResponse cancel(
+            Long userId,
+            Long eventId) {
+
+        Event event =
+                getOwnedEvent(userId, eventId);
+
+        /*
+         * Only published events can be cancelled.
+         */
+        if (event.getStatus() != EventStatus.PUBLISHED) {
+
+            throw new RuntimeException(
+                    "Only published events can be cancelled");
+        }
+
+        event.setStatus(
+                EventStatus.CANCELLED);
+
+        event.setUpdatedAt(
+                LocalDateTime.now());
+
+        Event savedEvent =
+                eventRepository.save(event);
+
+        // ========================================================
+        // EVENT CANCELLED NOTIFICATION
+        // ========================================================
+
+        notificationService.notifyRegisteredStudents(
+                savedEvent.getId(),
+                "Event Cancelled",
+                "The event \""
+                        + savedEvent.getTitle()
+                        + "\" has been cancelled.",
+                NotificationType.EVENT_CANCELLED,
+                savedEvent
+        );
+
+        return toResponse(savedEvent);
     }
 
     // ============================================================
@@ -319,11 +521,29 @@ public class OrganizerEventService {
                     "Only approved events can be published");
         }
 
+        if (event.getScope() == null) {
+
+            throw new RuntimeException(
+                    "Event scope is missing");
+        }
+
+        validateEventScope(
+                event.getOrganizer(),
+                event.getScope()
+        );
+
         if (event.getRegistrationDeadline()
                 .isAfter(event.getStartDateTime())) {
 
             throw new RuntimeException(
                     "Registration deadline must be before event start");
+        }
+
+        if (event.isCertificateEnabled()
+                && event.getCertificateTemplate() == null) {
+
+            throw new RuntimeException(
+                    "Certificate template is required for published events");
         }
 
         event.setStatus(
@@ -332,8 +552,23 @@ public class OrganizerEventService {
         event.setUpdatedAt(
                 LocalDateTime.now());
 
-        return toResponse(
-                eventRepository.save(event));
+        Event savedEvent =
+                eventRepository.save(event);
+
+        // ========================================================
+        // NEW EVENT NOTIFICATION
+        // ========================================================
+
+        notificationService.notifyAllUsers(
+                "New Event Available",
+                "A new event \""
+                        + savedEvent.getTitle()
+                        + "\" has been published.",
+                NotificationType.NEW_EVENT,
+                savedEvent
+        );
+
+        return toResponse(savedEvent);
     }
 
     // ============================================================
@@ -352,8 +587,9 @@ public class OrganizerEventService {
             boolean certificateEnabled) {
 
         if (!endDateTime.isAfter(startDateTime)) {
+
             throw new RuntimeException(
-                    "Event end time must be after start time");
+                    "Event end time must be after event start time");
         }
 
         if (!registrationDeadline
@@ -411,6 +647,55 @@ public class OrganizerEventService {
     }
 
     // ============================================================
+    // EVENT SCOPE VALIDATION
+    // ============================================================
+
+    private void validateEventScope(
+            Organizer organizer,
+            EventScope scope) {
+
+        if (scope == null) {
+
+            throw new RuntimeException(
+                    "Event scope is required");
+        }
+
+        /*
+         * A Department-scoped event requires the Organizer's
+         * Organization to belong to a Department.
+         */
+        if (scope == EventScope.DEPARTMENT) {
+
+            if (organizer.getOrganization() == null) {
+
+                throw new RuntimeException(
+                        "Organizer is not associated with an organization");
+            }
+
+            if (organizer.getOrganization().getDepartment() == null) {
+
+                throw new RuntimeException(
+                        "Department-scoped events are not allowed for a college-wide organization");
+            }
+        }
+
+        /*
+         * ORGANIZATION scope is valid for both:
+         *
+         * 1. Department-specific organizations
+         * 2. College-wide organizations
+         */
+        if (scope == EventScope.ORGANIZATION) {
+
+            if (organizer.getOrganization() == null) {
+
+                throw new RuntimeException(
+                        "Organizer is not associated with an organization");
+            }
+        }
+    }
+
+    // ============================================================
     // OWNERSHIP
     // ============================================================
 
@@ -440,14 +725,35 @@ public class OrganizerEventService {
         return event;
     }
 
+    // ============================================================
+    // GET ORGANIZER
+    // ============================================================
+
     private Organizer getOrganizerByUserId(
             Long userId) {
 
-        return organizerRepository
-                .findByUserId(userId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Organizer account not found"));
+        Organizer organizer =
+                organizerRepository
+                        .findByUserId(userId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Organizer account not found"));
+
+        Long organizationId =
+                organizer.getOrganization().getId();
+
+        /*
+         * Explicitly reload the Organization together with
+         * its Department relationship.
+         */
+        organizer.setOrganization(
+                organizationRepository
+                        .findByIdWithDepartment(organizationId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Organization account not found")));
+
+        return organizer;
     }
 
     // ============================================================
@@ -472,6 +778,7 @@ public class OrganizerEventService {
                 event.getStartDateTime(),
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
+                event.getScope(),
                 event.getCapacityType(),
                 event.getCapacity(),
                 event.getPaymentType(),
@@ -483,4 +790,3 @@ public class OrganizerEventService {
         );
     }
 }
-

@@ -9,6 +9,7 @@ import com.campussync.campussync_backend.dto.EventResponse;
 import com.campussync.campussync_backend.entity.Event;
 import com.campussync.campussync_backend.entity.Organization;
 import com.campussync.campussync_backend.entity.OrganizationHead;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.EventStatus;
 import com.campussync.campussync_backend.repository.EventRepository;
 import com.campussync.campussync_backend.repository.OrganizationHeadRepository;
@@ -151,6 +152,19 @@ public class OrganizationHeadEventApprovalService {
             OrganizationHead head,
             Event event) {
 
+        /*
+         * The event itself must explicitly be
+         * ORGANIZATION scoped.
+         *
+         * A DEPARTMENT-scoped event must be approved
+         * by the appropriate Department Head instead.
+         */
+        if (event.getScope() != EventScope.ORGANIZATION) {
+
+            throw new RuntimeException(
+                    "This event is not organization-scoped");
+        }
+
         Organization eventOrganization =
                 event.getOrganizer()
                         .getOrganization();
@@ -159,6 +173,16 @@ public class OrganizationHeadEventApprovalService {
 
             throw new RuntimeException(
                     "Event organization not found");
+        }
+
+        /*
+         * The Organization Head can approve only events
+         * belonging to their own organization.
+         */
+        if (head.getOrganization() == null) {
+
+            throw new RuntimeException(
+                    "Organization Head is not associated with an organization");
         }
 
         if (!eventOrganization.getId()
@@ -195,6 +219,8 @@ public class OrganizationHeadEventApprovalService {
                 event.getStartDateTime(),
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
+
+                event.getScope(),
 
                 event.getCapacityType(),
                 event.getCapacity(),

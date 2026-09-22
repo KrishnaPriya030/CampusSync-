@@ -1,4 +1,3 @@
-
 package com.campussync.campussync_backend.controller;
 
 import java.util.List;
@@ -136,6 +135,24 @@ public class OrganizerEventController {
                 id);
 
         return ResponseEntity.noContent().build();
+    }
+
+    // ============================================================
+    // CANCEL EVENT
+    // ============================================================
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<EventResponse> cancelEvent(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        User user =
+                getAuthenticatedUser(authentication);
+
+        return ResponseEntity.ok(
+                eventService.cancel(
+                        user.getId(),
+                        id));
     }
 
     // ============================================================

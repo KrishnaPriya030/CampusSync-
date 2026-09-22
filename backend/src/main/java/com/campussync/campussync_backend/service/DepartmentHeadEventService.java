@@ -106,6 +106,9 @@ public class DepartmentHeadEventService {
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
 
+                // NEW: Event scope
+                event.getScope(),
+
                 event.getCapacityType(),
                 event.getCapacity(),
 
