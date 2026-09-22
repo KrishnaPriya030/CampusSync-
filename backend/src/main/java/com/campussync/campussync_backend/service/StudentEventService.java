@@ -1,12 +1,15 @@
 package com.campussync.campussync_backend.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
 import com.campussync.campussync_backend.dto.EventResponse;
 import com.campussync.campussync_backend.entity.Event;
+import com.campussync.campussync_backend.enums.EventScope;
 import com.campussync.campussync_backend.enums.EventStatus;
+import com.campussync.campussync_backend.enums.PaymentType;
 import com.campussync.campussync_backend.repository.EventRepository;
 
 @Service
@@ -29,6 +32,40 @@ public class StudentEventService {
         return eventRepository
                 .findByStatusAndDeletedFalseOrderByStartDateTimeAsc(
                         EventStatus.PUBLISHED)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // ============================================================
+    // SEARCH & FILTER PUBLISHED EVENTS
+    // ============================================================
+
+    public List<EventResponse> searchEvents(
+            String keyword,
+            Long departmentId,
+            Long organizationId,
+            EventScope scope,
+            PaymentType paymentType,
+            LocalDateTime startDate,
+            LocalDateTime endDate) {
+
+        // Convert blank keyword to null so that
+        // the repository treats it as "no keyword filter".
+        if (keyword != null && keyword.isBlank()) {
+            keyword = null;
+        }
+
+        return eventRepository
+                .searchPublishedEvents(
+                        EventStatus.PUBLISHED,
+                        keyword,
+                        departmentId,
+                        organizationId,
+                        scope,
+                        paymentType,
+                        startDate,
+                        endDate)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -74,7 +111,6 @@ public class StudentEventService {
                 event.getEndDateTime(),
                 event.getRegistrationDeadline(),
 
-                // NEW: Event scope
                 event.getScope(),
 
                 event.getCapacityType(),
