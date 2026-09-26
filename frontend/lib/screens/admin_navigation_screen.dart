@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
 import '../storage/token_storage.dart';
+
 import 'admin_dashboard_screen.dart';
 import 'admin_organizations_screen.dart';
 import 'admin_organizers_screen.dart';
@@ -52,6 +53,10 @@ class _AdminNavigationScreenState
     ];
   }
 
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+
   void _changePage(int index) {
     if (index < 0 || index >= _screens.length) {
       return;
@@ -60,18 +65,33 @@ class _AdminNavigationScreenState
     setState(() {
       _selectedIndex = index;
     });
-
-    Navigator.of(context).maybePop();
   }
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
 
   Future<void> _logout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Logout'),
-          content: const Text(
+          backgroundColor: const Color(0xFF111827),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Logout',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          content: Text(
             'Are you sure you want to logout?',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.65),
+            ),
           ),
           actions: [
             TextButton(
@@ -84,6 +104,10 @@ class _AdminNavigationScreenState
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
               child: const Text('Logout'),
             ),
           ],
@@ -108,6 +132,10 @@ class _AdminNavigationScreenState
       (route) => false,
     );
   }
+
+  // ============================================================
+  // CURRENT TITLE
+  // ============================================================
 
   String get _currentTitle {
     switch (_selectedIndex) {
@@ -134,251 +162,168 @@ class _AdminNavigationScreenState
     }
   }
 
+  // ============================================================
+  // BUILD
+  // ============================================================
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF060917),
 
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0B1024),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          _currentTitle,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-
-      drawer: _buildDrawer(),
-
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
       ),
+
+      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      backgroundColor: const Color(0xFF0B1024),
+  // ============================================================
+  // BOTTOM NAVIGATION
+  // ============================================================
+
+  Widget _buildBottomNavigationBar() {
+    final width = MediaQuery.sizeOf(context).width;
+
+    final bool isDesktop = width >= 900;
+    final bool isTablet = width >= 600 && width < 900;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B1024),
+        border: Border(
+          top: BorderSide(
+            color: Colors.white.withOpacity(0.08),
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
       child: SafeArea(
-        child: Column(
-          children: [
-            _buildDrawerHeader(),
+        top: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: isDesktop
+                  ? 1100
+                  : isTablet
+                      ? 800
+                      : double.infinity,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop
+                    ? 28
+                    : isTablet
+                        ? 18
+                        : 4,
+                vertical: isDesktop ? 8 : 4,
+              ),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
 
-            const SizedBox(height: 10),
+                selectedIndex: _selectedIndex,
 
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
+                onDestinationSelected: _changePage,
+
+                height: isDesktop ? 72 : 64,
+
+                indicatorColor:
+                    const Color(0xFF8B5CF6)
+                        .withOpacity(0.18),
+
+                indicatorShape:
+                    RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                children: [
-                  _drawerItem(
-                    index: 0,
-                    icon: Icons.dashboard_rounded,
-                    title: 'Dashboard',
+
+                labelBehavior: isDesktop
+                    ? NavigationDestinationLabelBehavior
+                        .alwaysShow
+                    : NavigationDestinationLabelBehavior
+                        .alwaysShow,
+
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.dashboard_outlined,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.dashboard_rounded,
+                      size: isDesktop ? 25 : 23,
+                    ),
+                    label: 'Home',
                   ),
 
-                  _drawerItem(
-                    index: 1,
-                    icon: Icons.business_rounded,
-                    title: 'Organizations',
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.business_outlined,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.business_rounded,
+                      size: isDesktop ? 25 : 23,
+                    ),
+                    label: 'Organizations',
                   ),
 
-                  _drawerItem(
-                    index: 2,
-                    icon: Icons.groups_rounded,
-                    title: 'Organizers',
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.groups_outlined,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.groups_rounded,
+                      size: isDesktop ? 25 : 23,
+                    ),
+                    label: 'Organizers',
                   ),
 
-                  _drawerItem(
-                    index: 3,
-                    icon: Icons.school_rounded,
-                    title: 'Students',
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.school_outlined,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.school_rounded,
+                      size: isDesktop ? 25 : 23,
+                    ),
+                    label: 'Students',
                   ),
 
-                  _drawerItem(
-                    index: 4,
-                    icon: Icons.admin_panel_settings_rounded,
-                    title: 'Platform Administration',
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Divider(
-                    color: Colors.white.withOpacity(0.10),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  _drawerItem(
-                    index: 5,
-                    icon: Icons.person_rounded,
-                    title: 'Profile',
+                  NavigationDestination(
+                    icon: Icon(
+                      Icons.more_horiz_rounded,
+                      size: isDesktop ? 24 : 22,
+                    ),
+                    selectedIcon: Icon(
+                      Icons.more_horiz_rounded,
+                      size: isDesktop ? 25 : 23,
+                    ),
+                    label: 'More',
                   ),
                 ],
               ),
             ),
-
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: _logout,
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                  ),
-                  label: const Text('Logout'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: BorderSide(
-                      color: Colors.redAccent.withOpacity(0.35),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerHeader() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        24,
-        20,
-        22,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF8B5CF6).withOpacity(0.20),
-            const Color(0xFF3B82F6).withOpacity(0.10),
-          ],
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF8B5CF6)
-                  .withOpacity(0.16),
-              border: Border.all(
-                color: const Color(0xFF8B5CF6)
-                    .withOpacity(0.25),
-              ),
-            ),
-            child: const Icon(
-              Icons.admin_panel_settings_rounded,
-              color: Color(0xFFC4B5FD),
-              size: 28,
-            ),
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.user.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  widget.user.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.50),
-                    fontSize: 12,
-                  ),
-                ),
-
-                const SizedBox(height: 5),
-
-                Text(
-                  widget.user.role.toUpperCase(),
-                  style: const TextStyle(
-                    color: Color(0xFFC4B5FD),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _drawerItem({
-    required int index,
-    required IconData icon,
-    required String title,
-  }) {
-    final selected = _selectedIndex == index;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: ListTile(
-        onTap: () => _changePage(index),
-        selected: selected,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        selectedTileColor:
-            const Color(0xFF8B5CF6).withOpacity(0.14),
-        leading: Icon(
-          icon,
-          color: selected
-              ? const Color(0xFFC4B5FD)
-              : Colors.white.withOpacity(0.50),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: selected
-                ? Colors.white
-                : Colors.white.withOpacity(0.70),
-            fontSize: 14,
-            fontWeight: selected
-                ? FontWeight.w600
-                : FontWeight.w400,
           ),
         ),
       ),
     );
   }
 }
+
+// ================================================================
+// ADMIN PROFILE
+// ================================================================
 
 class _AdminProfileScreen extends StatelessWidget {
   final UserProfile user;
@@ -404,101 +349,139 @@ class _AdminProfileScreen extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const SizedBox(height: 30),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 600,
+            ),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                const SizedBox(height: 30),
 
-            Center(
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF8B5CF6)
-                      .withOpacity(0.14),
-                  border: Border.all(
-                    color: const Color(0xFF8B5CF6)
-                        .withOpacity(0.25),
+                // ==================================================
+                // PROFILE ICON
+                // ==================================================
+
+                Center(
+                  child: Container(
+                    width: 96,
+                    height: 96,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          const Color(0xFF8B5CF6)
+                              .withOpacity(0.14),
+                      border: Border.all(
+                        color:
+                            const Color(0xFF8B5CF6)
+                                .withOpacity(0.25),
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.person_rounded,
+                      color: Color(0xFFC4B5FD),
+                      size: 48,
+                    ),
                   ),
                 ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Color(0xFFC4B5FD),
-                  size: 48,
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-            Text(
-              user.name,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+                // ==================================================
+                // NAME
+                // ==================================================
 
-            const SizedBox(height: 8),
-
-            Text(
-              user.email,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.50),
-                fontSize: 14,
-              ),
-            ),
-
-            const SizedBox(height: 14),
-
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6)
-                      .withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  user.role.toUpperCase(),
+                Text(
+                  user.name,
+                  textAlign: TextAlign.center,
                   style: const TextStyle(
-                    color: Color(0xFFC4B5FD),
-                    fontSize: 11,
+                    color: Colors.white,
+                    fontSize: 26,
                     fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
                   ),
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 40),
+                const SizedBox(height: 8),
 
-            SizedBox(
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: onLogout,
-                icon: const Icon(
-                  Icons.logout_rounded,
-                ),
-                label: const Text(
-                  'Logout',
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: BorderSide(
-                    color: Colors.redAccent.withOpacity(0.35),
+                // ==================================================
+                // EMAIL
+                // ==================================================
+
+                Text(
+                  user.email,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.50),
+                    fontSize: 14,
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 14),
+
+                // ==================================================
+                // ROLE
+                // ==================================================
+
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          const Color(0xFF8B5CF6)
+                              .withOpacity(0.12),
+                      borderRadius:
+                          BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      user.role.toUpperCase(),
+                      style: const TextStyle(
+                        color: Color(0xFFC4B5FD),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
+
+                // ==================================================
+                // LOGOUT
+                // ==================================================
+
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: onLogout,
+                    icon: const Icon(
+                      Icons.logout_rounded,
+                    ),
+                    label: const Text(
+                      'Logout',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: BorderSide(
+                        color:
+                            Colors.redAccent
+                                .withOpacity(0.35),
+                      ),
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(15),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

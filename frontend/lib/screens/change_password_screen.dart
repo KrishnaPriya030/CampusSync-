@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
@@ -9,23 +10,30 @@ import 'home_screen.dart';
 import 'login_screen.dart';
 import 'organizer_dashboard_screen.dart';
 
+// Department Head and Organization Head dashboards
+// will be connected when those modules are created.
+
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 
   @override
-  State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
+  State<ChangePasswordScreen> createState() =>
+      _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenState
+    extends State<ChangePasswordScreen> {
   final TextEditingController currentPasswordController =
       TextEditingController();
 
-  final TextEditingController newPasswordController = TextEditingController();
+  final TextEditingController newPasswordController =
+      TextEditingController();
 
   final TextEditingController confirmPasswordController =
       TextEditingController();
 
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> formKey =
+      GlobalKey<FormState>();
 
   final AuthService authService = AuthService();
 
@@ -64,10 +72,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // GET TOKEN
       // --------------------------------------------------
 
-      final String? token = await tokenStorage.getToken();
+      final String? token =
+          await tokenStorage.getToken();
 
       if (token == null || token.isEmpty) {
-        throw Exception('Authentication token not found');
+        throw Exception(
+          'Authentication token not found',
+        );
       }
 
       // --------------------------------------------------
@@ -81,17 +92,24 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         token,
       );
 
-      debugPrint('PASSWORD: password changed successfully');
+      debugPrint(
+        'PASSWORD: password changed successfully',
+      );
 
       // --------------------------------------------------
       // GET CURRENT USER
       // --------------------------------------------------
 
-      final UserProfile user = await authService.getCurrentUser(token);
+      final UserProfile user =
+          await authService.getCurrentUser(token);
 
-      debugPrint('PASSWORD: user = ${user.email}');
+      debugPrint(
+        'PASSWORD: user = ${user.email}',
+      );
 
-      debugPrint('PASSWORD: role = ${user.role}');
+      debugPrint(
+        'PASSWORD: role = ${user.role}',
+      );
 
       if (!mounted) return;
 
@@ -101,13 +119,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Password changed successfully'),
+          content: Text(
+            'Password changed successfully',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
 
       // Small delay so user can see success message.
-      await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(
+        const Duration(milliseconds: 500),
+      );
 
       if (!mounted) return;
 
@@ -116,33 +138,93 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       // --------------------------------------------------
 
       switch (user.role.toUpperCase()) {
+        // ==================================================
+        // ADMIN
+        // ==================================================
+
         case 'ADMIN':
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminDashboardScreen(user: user),
+              builder: (context) =>
+                  AdminDashboardScreen(
+                user: user,
+              ),
             ),
             (route) => false,
           );
+
           break;
+
+        // ==================================================
+        // ORGANIZER
+        // ==================================================
 
         case 'ORGANIZER':
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) => OrganizerDashboardScreen(user: user),
+              builder: (context) =>
+                  OrganizerDashboardScreen(
+                user: user,
+              ),
             ),
             (route) => false,
           );
+
           break;
+
+        // ==================================================
+        // STUDENT
+        // ==================================================
 
         case 'STUDENT':
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
+            MaterialPageRoute(
+              builder: (context) =>
+                  HomeScreen(
+                user: user,
+              ),
+            ),
             (route) => false,
           );
+
           break;
+
+        // ==================================================
+        // DEPARTMENT HEAD
+        // ==================================================
+
+        case 'DEPARTMENT_HEAD':
+          debugPrint(
+            'PASSWORD: DEPARTMENT_HEAD detected',
+          );
+
+          _showMessage(
+            'Department Head dashboard is being configured.',
+          );
+
+          break;
+
+        // ==================================================
+        // ORGANIZATION HEAD
+        // ==================================================
+
+        case 'ORGANIZATION_HEAD':
+          debugPrint(
+            'PASSWORD: ORGANIZATION_HEAD detected',
+          );
+
+          _showMessage(
+            'Organization Head dashboard is being configured.',
+          );
+
+          break;
+
+        // ==================================================
+        // UNKNOWN ROLE
+        // ==================================================
 
         default:
           await tokenStorage.clearToken();
@@ -151,20 +233,22 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const LoginScreen()),
+            MaterialPageRoute(
+              builder: (context) =>
+                  const LoginScreen(),
+            ),
             (route) => false,
           );
       }
     } catch (e) {
-      debugPrint('PASSWORD: change failed: $e');
+      debugPrint(
+        'PASSWORD: change failed: $e',
+      );
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Password change failed: ${e.toString()}'),
-          behavior: SnackBarBehavior.floating,
-        ),
+      _showMessage(
+        'Password change failed: ${e.toString()}',
       );
     } finally {
       if (mounted) {
@@ -176,46 +260,84 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   // --------------------------------------------------
+  // MESSAGE
+  // --------------------------------------------------
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // --------------------------------------------------
   // PASSWORD FIELD
   // --------------------------------------------------
 
-  InputDecoration passwordDecoration(String label) {
+  InputDecoration passwordDecoration(
+    String label,
+  ) {
     return InputDecoration(
       labelText: label,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-      prefixIcon: const Icon(Icons.lock_outline_rounded),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      prefixIcon: const Icon(
+        Icons.lock_outline_rounded,
+      ),
     );
   }
+
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Change Password')),
+      appBar: AppBar(
+        title: const Text(
+          'Change Password',
+        ),
+      ),
 
       // --------------------------------------------------
       // BODY
       // --------------------------------------------------
+
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
+              constraints: const BoxConstraints(
+                maxWidth: 500,
+              ),
               child: Form(
                 key: formKey,
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.stretch,
                   children: [
                     // --------------------------------------------------
                     // ICON
                     // --------------------------------------------------
-                    const Icon(Icons.lock_reset_rounded, size: 70),
+
+                    const Icon(
+                      Icons.lock_reset_rounded,
+                      size: 70,
+                    ),
 
                     const SizedBox(height: 20),
 
                     // --------------------------------------------------
                     // TITLE
                     // --------------------------------------------------
+
                     const Text(
                       'Change your password',
                       textAlign: TextAlign.center,
@@ -230,7 +352,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     Text(
                       'Enter your current password and choose a new one.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
                     ),
 
                     const SizedBox(height: 32),
@@ -238,12 +362,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     // --------------------------------------------------
                     // CURRENT PASSWORD
                     // --------------------------------------------------
+
                     TextFormField(
-                      controller: currentPasswordController,
+                      controller:
+                          currentPasswordController,
                       obscureText: true,
-                      decoration: passwordDecoration('Current Password'),
+                      decoration:
+                          passwordDecoration(
+                        'Current Password',
+                      ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null ||
+                            value.isEmpty) {
                           return 'Current password is required';
                         }
 
@@ -256,12 +386,18 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     // --------------------------------------------------
                     // NEW PASSWORD
                     // --------------------------------------------------
+
                     TextFormField(
-                      controller: newPasswordController,
+                      controller:
+                          newPasswordController,
                       obscureText: true,
-                      decoration: passwordDecoration('New Password'),
+                      decoration:
+                          passwordDecoration(
+                        'New Password',
+                      ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null ||
+                            value.isEmpty) {
                           return 'New password is required';
                         }
 
@@ -278,16 +414,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     // --------------------------------------------------
                     // CONFIRM PASSWORD
                     // --------------------------------------------------
+
                     TextFormField(
-                      controller: confirmPasswordController,
+                      controller:
+                          confirmPasswordController,
                       obscureText: true,
-                      decoration: passwordDecoration('Confirm New Password'),
+                      decoration:
+                          passwordDecoration(
+                        'Confirm New Password',
+                      ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
+                        if (value == null ||
+                            value.isEmpty) {
                           return 'Please confirm your password';
                         }
 
-                        if (value != newPasswordController.text) {
+                        if (value !=
+                            newPasswordController.text) {
                           return 'Passwords do not match';
                         }
 
@@ -300,15 +443,19 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     // --------------------------------------------------
                     // BUTTON
                     // --------------------------------------------------
+
                     SizedBox(
                       height: 54,
                       child: ElevatedButton(
-                        onPressed: isLoading ? null : changePassword,
+                        onPressed: isLoading
+                            ? null
+                            : changePassword,
                         child: isLoading
                             ? const SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(
+                                child:
+                                    CircularProgressIndicator(
                                   strokeWidth: 2.5,
                                 ),
                               )
@@ -316,7 +463,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                 'Change Password',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight:
+                                      FontWeight.w600,
                                 ),
                               ),
                       ),
@@ -331,3 +479,4 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     );
   }
 }
+

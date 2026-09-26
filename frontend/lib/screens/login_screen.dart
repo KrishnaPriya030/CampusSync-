@@ -1,3 +1,4 @@
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -7,8 +8,15 @@ import '../services/auth_service.dart';
 import '../storage/token_storage.dart';
 
 import 'admin_dashboard_screen.dart';
+import 'change_password_screen.dart';
 import 'home_screen.dart';
 import 'organizer_dashboard_screen.dart';
+
+// TODO: These two screens will be created when we build
+// the Department Head and Organization Head frontend modules.
+//
+// import 'department_head_dashboard_screen.dart';
+// import 'organization_head_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -73,6 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('LOGIN: login successful');
       debugPrint('LOGIN: role = ${loginResponse.role}');
       debugPrint('LOGIN: userId = ${loginResponse.userId}');
+      debugPrint('LOGIN: firstLogin = ${loginResponse.firstLogin}');
 
       // ------------------------------------------------------
       // 2. SAVE JWT
@@ -87,7 +96,31 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       // ------------------------------------------------------
-      // 3. GET CURRENT USER
+      // 3. FIRST LOGIN CHECK
+      //
+      // Backend creates initial accounts with firstLogin=true.
+      // The user must change the initial password before
+      // accessing the normal application.
+      // ------------------------------------------------------
+
+      if (loginResponse.firstLogin) {
+        debugPrint(
+          'LOGIN: first login detected → ChangePasswordScreen',
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                const ChangePasswordScreen(),
+          ),
+        );
+
+        return;
+      }
+
+      // ------------------------------------------------------
+      // 4. GET CURRENT USER
       // ------------------------------------------------------
 
       final user = await authService.getCurrentUser(
@@ -103,7 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       // ------------------------------------------------------
-      // 4. ROLE-BASED NAVIGATION
+      // 5. ROLE-BASED NAVIGATION
       // ------------------------------------------------------
 
       switch (user.role.toUpperCase()) {
@@ -166,6 +199,42 @@ class _LoginScreenState extends State<LoginScreen> {
                 user: user,
               ),
             ),
+          );
+
+          break;
+
+        // ====================================================
+        // DEPARTMENT HEAD
+        // ====================================================
+
+        case 'DEPARTMENT_HEAD':
+          debugPrint(
+            'LOGIN: DEPARTMENT_HEAD detected',
+          );
+
+          // DepartmentHeadDashboardScreen will be connected
+          // here when we build the Department Head frontend.
+
+          _showError(
+            'Department Head dashboard is being configured.',
+          );
+
+          break;
+
+        // ====================================================
+        // ORGANIZATION HEAD
+        // ====================================================
+
+        case 'ORGANIZATION_HEAD':
+          debugPrint(
+            'LOGIN: ORGANIZATION_HEAD detected',
+          );
+
+          // OrganizationHeadDashboardScreen will be connected
+          // here when we build the Organization Head frontend.
+
+          _showError(
+            'Organization Head dashboard is being configured.',
           );
 
           break;
@@ -378,8 +447,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             key: _formKey,
                             child: Column(
                               crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .stretch,
+                                  CrossAxisAlignment.stretch,
                               children: [
                                 // ------------------------------------------------
                                 // LOGO
@@ -670,3 +738,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
