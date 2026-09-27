@@ -20,6 +20,8 @@ class Student {
   final String status;
   final String accountStatus;
 
+  final bool firstLogin;
+
   Student({
     required this.id,
     required this.name,
@@ -37,6 +39,7 @@ class Student {
     required this.internal,
     required this.status,
     required this.accountStatus,
+    required this.firstLogin,
   });
 
   factory Student.fromJson(
@@ -45,9 +48,11 @@ class Student {
     return Student(
       id: (json['id'] as num?)?.toInt() ?? 0,
 
-      name: json['name']?.toString() ?? '',
+      name:
+          json['name']?.toString() ?? '',
 
-      email: json['email']?.toString() ?? '',
+      email:
+          json['email']?.toString() ?? '',
 
       phoneNumber:
           json['phoneNumber']?.toString(),
@@ -87,6 +92,9 @@ class Student {
 
       accountStatus:
           json['accountStatus']?.toString() ?? '',
+
+      firstLogin:
+          json['firstLogin'] == true,
     );
   }
 }

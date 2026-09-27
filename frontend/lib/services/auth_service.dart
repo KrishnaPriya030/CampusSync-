@@ -17,7 +17,8 @@ class AuthService {
     String email,
     String password,
   ) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/auth/login');
+    final url =
+        Uri.parse('${ApiConfig.baseUrl}/api/auth/login');
 
     final response = await http.post(
       url,
@@ -32,7 +33,8 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
 
       return LoginResponse.fromJson(data);
     }
@@ -49,7 +51,8 @@ class AuthService {
   Future<UserProfile> getCurrentUser(
     String token,
   ) async {
-    final url = Uri.parse('${ApiConfig.baseUrl}/api/users/me');
+    final url =
+        Uri.parse('${ApiConfig.baseUrl}/api/users/me');
 
     final response = await http.get(
       url,
@@ -61,7 +64,8 @@ class AuthService {
 
     if (response.statusCode == 200) {
       final data =
-          jsonDecode(response.body) as Map<String, dynamic>;
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
 
       return UserProfile.fromJson(data);
     }
@@ -81,8 +85,9 @@ class AuthService {
     String confirmPassword,
     String token,
   ) async {
-    final url =
-        Uri.parse('${ApiConfig.baseUrl}/api/users/change-password');
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/users/change-password',
+    );
 
     final response = await http.put(
       url,
@@ -105,11 +110,92 @@ class AuthService {
   }
 
   // ============================================================
+  // FORGOT PASSWORD
+  // ============================================================
+
+  Future<Map<String, dynamic>> forgotPassword(
+    String email,
+  ) async {
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/auth/forgot-password',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'email': email,
+      }),
+    );
+
+    final data =
+        jsonDecode(response.body)
+            as Map<String, dynamic>;
+
+    if (response.statusCode == 200) {
+      return data;
+    }
+
+    throw Exception(
+      data['message']?.toString() ??
+          'Failed to generate password reset token.',
+    );
+  }
+
+  // ============================================================
+  // RESET PASSWORD
+  // ============================================================
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final url = Uri.parse(
+      '${ApiConfig.baseUrl}/api/auth/reset-password',
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'token': token,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return;
+    }
+
+    try {
+      final data =
+          jsonDecode(response.body)
+              as Map<String, dynamic>;
+
+      throw Exception(
+        data['message']?.toString() ??
+            'Password reset failed.',
+      );
+    } catch (_) {
+      throw Exception(
+        'Password reset failed: ${response.statusCode}',
+      );
+    }
+  }
+
+  // ============================================================
   // LOGOUT
   // ============================================================
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs =
+        await SharedPreferences.getInstance();
 
     // Remove authentication/session information.
     await prefs.remove('token');
@@ -123,7 +209,8 @@ class AuthService {
   // ============================================================
 
   Future<void> clearSession() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs =
+        await SharedPreferences.getInstance();
 
     await prefs.clear();
   }

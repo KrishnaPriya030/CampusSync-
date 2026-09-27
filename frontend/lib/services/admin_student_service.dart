@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:io';
-import '../config/api_config.dart';
+
 import 'package:http/http.dart' as http;
 
+import '../config/api_config.dart';
 import '../models/student.dart';
 import '../models/department.dart';
 import '../models/branch.dart';
@@ -12,7 +12,6 @@ import '../models/update_student_request.dart';
 import '../models/bulk_student_import_response.dart';
 
 class AdminStudentService {
-
   // ============================================================
   // JSON HEADERS
   // ============================================================
@@ -34,7 +33,9 @@ class AdminStudentService {
     String token,
   ) async {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/api/admin/students'),
+      Uri.parse(
+        '${ApiConfig.baseUrl}/api/admin/students',
+      ),
       headers: _headers(token),
       body: jsonEncode(request.toJson()),
     );
@@ -68,7 +69,9 @@ class AdminStudentService {
     String token,
   ) async {
     final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/api/admin/students'),
+      Uri.parse(
+        '${ApiConfig.baseUrl}/api/admin/students',
+      ),
       headers: _headers(token),
     );
 
@@ -271,7 +274,8 @@ class AdminStudentService {
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to activate student: '
-        '${response.statusCode}',
+        '${response.statusCode}\n'
+        '${response.body}',
       );
     }
 
@@ -305,7 +309,8 @@ class AdminStudentService {
     if (response.statusCode != 200) {
       throw Exception(
         'Failed to deactivate student: '
-        '${response.statusCode}',
+        '${response.statusCode}\n'
+        '${response.body}',
       );
     }
 
@@ -323,15 +328,19 @@ class AdminStudentService {
   // ============================================================
   // BULK STUDENT IMPORT
   // POST /api/admin/students/import
+  //
+  // Web/Chrome compatible:
+  // sends Excel bytes instead of using dart:io File.
   // ============================================================
 
   Future<BulkStudentImportResponse> importStudents(
-    File file,
+    List<int> fileBytes,
+    String fileName,
     String token,
   ) async {
-    if (!await file.exists()) {
+    if (fileBytes.isEmpty) {
       throw Exception(
-        'Selected file does not exist',
+        'Selected file is empty',
       );
     }
 
@@ -346,9 +355,10 @@ class AdminStudentService {
         'Bearer $token';
 
     request.files.add(
-      await http.MultipartFile.fromPath(
+      http.MultipartFile.fromBytes(
         'file',
-        file.path,
+        fileBytes,
+        filename: fileName,
       ),
     );
 
@@ -374,7 +384,8 @@ class AdminStudentService {
       );
     }
 
-    final decoded = jsonDecode(response.body);
+    final decoded =
+        jsonDecode(response.body);
 
     if (decoded is! Map<String, dynamic>) {
       throw Exception(
@@ -382,21 +393,8 @@ class AdminStudentService {
       );
     }
 
-    return BulkStudentImportResponse(
-      totalRows:
-          (decoded['totalRows'] as num?)?.toInt() ?? 0,
-      successful:
-          (decoded['successful'] as num?)?.toInt() ?? 0,
-      failed:
-          (decoded['failed'] as num?)?.toInt() ?? 0,
-      errors:
-          decoded['errors'] is List
-              ? (decoded['errors'] as List)
-                  .map(
-                    (e) => e.toString(),
-                  )
-                  .toList()
-              : <String>[],
+    return BulkStudentImportResponse.fromJson(
+      decoded,
     );
   }
 }

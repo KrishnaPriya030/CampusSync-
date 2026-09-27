@@ -4,9 +4,6 @@ import '../models/user_profile.dart';
 import '../storage/token_storage.dart';
 
 import 'admin_dashboard_screen.dart';
-import 'admin_organizations_screen.dart';
-import 'admin_organizers_screen.dart';
-import 'admin_students_screen.dart';
 import 'admin_platform_administration_screen.dart';
 import 'login_screen.dart';
 
@@ -34,27 +31,38 @@ class _AdminNavigationScreenState
     super.initState();
 
     _screens = [
-      AdminDashboardScreen(
-        user: widget.user,
-      ),
-
-      const AdminOrganizationsScreen(),
-
-      const AdminOrganizersScreen(),
-
-      const AdminStudentsScreen(),
-
-      const AdminPlatformAdministrationScreen(),
+      _buildHomeNavigator(),
 
       _AdminProfileScreen(
         user: widget.user,
         onLogout: _logout,
       ),
+
+      AdminPlatformAdministrationScreen(
+        user: widget.user,
+      ),
     ];
   }
 
   // ============================================================
-  // NAVIGATION
+  // HOME NAVIGATOR
+  // ============================================================
+
+  Widget _buildHomeNavigator() {
+    return Navigator(
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (_) => AdminDashboardScreen(
+            user: widget.user,
+          ),
+          settings: settings,
+        );
+      },
+    );
+  }
+
+  // ============================================================
+  // PAGE CHANGE
   // ============================================================
 
   void _changePage(int index) {
@@ -81,7 +89,7 @@ class _AdminNavigationScreenState
             borderRadius: BorderRadius.circular(20),
           ),
           title: const Text(
-            'Logout',
+            'Logout?',
             style: TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
@@ -125,41 +133,13 @@ class _AdminNavigationScreenState
       return;
     }
 
-    Navigator.of(context).pushAndRemoveUntil(
+    Navigator.pushAndRemoveUntil(
+      context,
       MaterialPageRoute(
         builder: (_) => const LoginScreen(),
       ),
       (route) => false,
     );
-  }
-
-  // ============================================================
-  // CURRENT TITLE
-  // ============================================================
-
-  String get _currentTitle {
-    switch (_selectedIndex) {
-      case 0:
-        return 'Admin Dashboard';
-
-      case 1:
-        return 'Organizations';
-
-      case 2:
-        return 'Organizers';
-
-      case 3:
-        return 'Students';
-
-      case 4:
-        return 'Platform Administration';
-
-      case 5:
-        return 'Admin Profile';
-
-      default:
-        return 'Admin';
-    }
   }
 
   // ============================================================
@@ -171,12 +151,26 @@ class _AdminNavigationScreenState
     return Scaffold(
       backgroundColor: const Color(0xFF060917),
 
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: Column(
+        children: [
+          // ------------------------------------------------------
+          // MAIN CONTENT
+          // ------------------------------------------------------
 
-      bottomNavigationBar: _buildBottomNavigationBar(),
+          Expanded(
+            child: IndexedStack(
+              index: _selectedIndex,
+              children: _screens,
+            ),
+          ),
+
+          // ------------------------------------------------------
+          // BOTTOM NAVIGATION
+          // ------------------------------------------------------
+
+          _buildBottomNavigation(),
+        ],
+      ),
     );
   }
 
@@ -184,135 +178,152 @@ class _AdminNavigationScreenState
   // BOTTOM NAVIGATION
   // ============================================================
 
-  Widget _buildBottomNavigationBar() {
+  Widget _buildBottomNavigation() {
     final width = MediaQuery.sizeOf(context).width;
 
-    final bool isDesktop = width >= 900;
-    final bool isTablet = width >= 600 && width < 900;
+    final bool desktop = width >= 900;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1024),
-        border: Border(
-          top: BorderSide(
-            color: Colors.white.withOpacity(0.08),
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.fromLTRB(
+          desktop ? 24 : 10,
+          8,
+          desktop ? 24 : 10,
+          10,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B1024),
+          border: Border(
+            top: BorderSide(
+              color: Colors.white.withOpacity(0.08),
+            ),
           ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.25),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
         child: Center(
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: isDesktop
-                  ? 1100
-                  : isTablet
-                      ? 800
-                      : double.infinity,
+            constraints: const BoxConstraints(
+              maxWidth: 700,
             ),
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: isDesktop
-                    ? 28
-                    : isTablet
-                        ? 18
-                        : 4,
-                vertical: isDesktop ? 8 : 4,
-              ),
-              child: NavigationBar(
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-
-                selectedIndex: _selectedIndex,
-
-                onDestinationSelected: _changePage,
-
-                height: isDesktop ? 72 : 64,
-
-                indicatorColor:
-                    const Color(0xFF8B5CF6)
-                        .withOpacity(0.18),
-
-                indicatorShape:
-                    RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            child: Container(
+              height: desktop ? 66 : 62,
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.08),
                 ),
-
-                labelBehavior: isDesktop
-                    ? NavigationDestinationLabelBehavior
-                        .alwaysShow
-                    : NavigationDestinationLabelBehavior
-                        .alwaysShow,
-
-                destinations: [
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.dashboard_outlined,
-                      size: isDesktop ? 24 : 22,
-                    ),
-                    selectedIcon: Icon(
-                      Icons.dashboard_rounded,
-                      size: isDesktop ? 25 : 23,
-                    ),
-                    label: 'Home',
-                  ),
-
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.business_outlined,
-                      size: isDesktop ? 24 : 22,
-                    ),
-                    selectedIcon: Icon(
-                      Icons.business_rounded,
-                      size: isDesktop ? 25 : 23,
-                    ),
-                    label: 'Organizations',
-                  ),
-
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.groups_outlined,
-                      size: isDesktop ? 24 : 22,
-                    ),
-                    selectedIcon: Icon(
-                      Icons.groups_rounded,
-                      size: isDesktop ? 25 : 23,
-                    ),
-                    label: 'Organizers',
-                  ),
-
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.school_outlined,
-                      size: isDesktop ? 24 : 22,
-                    ),
-                    selectedIcon: Icon(
-                      Icons.school_rounded,
-                      size: isDesktop ? 25 : 23,
-                    ),
-                    label: 'Students',
-                  ),
-
-                  NavigationDestination(
-                    icon: Icon(
-                      Icons.more_horiz_rounded,
-                      size: isDesktop ? 24 : 22,
-                    ),
-                    selectedIcon: Icon(
-                      Icons.more_horiz_rounded,
-                      size: isDesktop ? 25 : 23,
-                    ),
-                    label: 'More',
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.20),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
+              child: Row(
+                children: [
+                  _NavigationItem(
+                    icon: Icons.home_rounded,
+                    label: 'Home',
+                    selected: _selectedIndex == 0,
+                    onTap: () => _changePage(0),
+                  ),
+
+                  _NavigationItem(
+                    icon: Icons.person_rounded,
+                    label: 'Profile',
+                    selected: _selectedIndex == 1,
+                    onTap: () => _changePage(1),
+                  ),
+
+                  _NavigationItem(
+                    icon: Icons.more_horiz_rounded,
+                    label: 'More',
+                    selected: _selectedIndex == 2,
+                    onTap: () => _changePage(2),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// NAVIGATION ITEM
+// ================================================================
+
+class _NavigationItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _NavigationItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 6,
+              horizontal: 6,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(
+                    milliseconds: 180,
+                  ),
+                  width: 42,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? const Color(0xFF8B5CF6)
+                            .withOpacity(0.16)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: selected
+                        ? const Color(0xFFC4B5FD)
+                        : Colors.white.withOpacity(0.45),
+                  ),
+                ),
+
+                const SizedBox(height: 3),
+
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: selected
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.45),
+                    fontSize: 10,
+                    fontWeight: selected
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -334,8 +345,28 @@ class _AdminProfileScreen extends StatelessWidget {
     required this.onLogout,
   });
 
+  String _initials(String name) {
+    final trimmed = name.trim();
+
+    if (trimmed.isEmpty) {
+      return 'A';
+    }
+
+    final parts = trimmed.split(RegExp(r'\s+'));
+
+    if (parts.length == 1) {
+      return parts.first[0].toUpperCase();
+    }
+
+    return '${parts.first[0]}${parts.last[0]}'
+        .toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final bool desktop = width >= 900;
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -349,140 +380,242 @@ class _AdminProfileScreen extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 600,
-            ),
-            child: ListView(
-              padding: const EdgeInsets.all(24),
-              children: [
-                const SizedBox(height: 30),
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            desktop ? 40 : 18,
+            desktop ? 34 : 22,
+            desktop ? 40 : 18,
+            30,
+          ),
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: 650,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
 
-                // ==================================================
-                // PROFILE ICON
-                // ==================================================
-
-                Center(
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color:
-                          const Color(0xFF8B5CF6)
-                              .withOpacity(0.14),
-                      border: Border.all(
-                        color:
-                            const Color(0xFF8B5CF6)
-                                .withOpacity(0.25),
+                    Container(
+                      width: desktop ? 110 : 96,
+                      height: desktop ? 110 : 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFF8B5CF6),
+                            Color(0xFF6366F1),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF8B5CF6)
+                                .withOpacity(0.22),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          _initials(user.name),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: desktop ? 34 : 30,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
-                    child: const Icon(
-                      Icons.person_rounded,
-                      color: Color(0xFFC4B5FD),
-                      size: 48,
+
+                    const SizedBox(height: 22),
+
+                    Text(
+                      user.name,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: desktop ? 28 : 24,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
+
+                    const SizedBox(height: 7),
+
+                    Text(
+                      user.email,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.50),
+                        fontSize: 14,
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5CF6)
+                            .withOpacity(0.13),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF8B5CF6)
+                              .withOpacity(0.20),
+                        ),
+                      ),
+                      child: Text(
+                        user.role.toUpperCase(),
+                        style: const TextStyle(
+                          color: Color(0xFFC4B5FD),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    _ProfileCard(
+                      icon: Icons.person_outline_rounded,
+                      title: 'Name',
+                      value: user.name,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    _ProfileCard(
+                      icon: Icons.email_outlined,
+                      title: 'Email',
+                      value: user.email,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    _ProfileCard(
+                      icon:
+                          Icons.admin_panel_settings_outlined,
+                      title: 'Role',
+                      value: user.role.toUpperCase(),
+                    ),
+
+                    const SizedBox(height: 30),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton.icon(
+                        onPressed: onLogout,
+                        icon: const Icon(
+                          Icons.logout_rounded,
+                        ),
+                        label: const Text(
+                          'Logout',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.redAccent,
+                          side: BorderSide(
+                            color: Colors.redAccent
+                                .withOpacity(0.35),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(15),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// PROFILE CARD
+// ================================================================
+
+class _ProfileCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _ProfileCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.055),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.08),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFF8B5CF6)
+                  .withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFFC4B5FD),
+              size: 21,
+            ),
+          ),
+
+          const SizedBox(width: 13),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color:
+                        Colors.white.withOpacity(0.42),
+                    fontSize: 11,
                   ),
                 ),
 
-                const SizedBox(height: 24),
-
-                // ==================================================
-                // NAME
-                // ==================================================
+                const SizedBox(height: 4),
 
                 Text(
-                  user.name,
-                  textAlign: TextAlign.center,
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-
-                const SizedBox(height: 8),
-
-                // ==================================================
-                // EMAIL
-                // ==================================================
-
-                Text(
-                  user.email,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.50),
                     fontSize: 14,
-                  ),
-                ),
-
-                const SizedBox(height: 14),
-
-                // ==================================================
-                // ROLE
-                // ==================================================
-
-                Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          const Color(0xFF8B5CF6)
-                              .withOpacity(0.12),
-                      borderRadius:
-                          BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      user.role.toUpperCase(),
-                      style: const TextStyle(
-                        color: Color(0xFFC4B5FD),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                // ==================================================
-                // LOGOUT
-                // ==================================================
-
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: onLogout,
-                    icon: const Icon(
-                      Icons.logout_rounded,
-                    ),
-                    label: const Text(
-                      'Logout',
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.redAccent,
-                      side: BorderSide(
-                        color:
-                            Colors.redAccent
-                                .withOpacity(0.35),
-                      ),
-                      shape:
-                          RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(15),
-                      ),
-                    ),
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

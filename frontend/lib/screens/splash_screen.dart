@@ -1,11 +1,11 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-
+import 'admin_navigation_screen.dart';
 import '../services/auth_service.dart';
 import '../storage/token_storage.dart';
 
-import 'admin_dashboard_screen.dart';
+
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'organizer_dashboard_screen.dart';
@@ -112,14 +112,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
         case 'ADMIN':
           debugPrint(
-            'SPLASH: ADMIN → AdminDashboardScreen',
+            'SPLASH: ADMIN → AdminNavigationScreen',
           );
 
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  AdminDashboardScreen(
+                 AdminNavigationScreen(
                 user: user,
               ),
             ),

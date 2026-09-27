@@ -1,20 +1,18 @@
-
 import 'package:flutter/material.dart';
 
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../storage/token_storage.dart';
 
-import 'admin_dashboard_screen.dart';
+import 'admin_navigation_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 import 'organizer_dashboard_screen.dart';
 
-// Department Head and Organization Head dashboards
-// will be connected when those modules are created.
-
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({super.key});
+  const ChangePasswordScreen({
+    super.key,
+  });
 
   @override
   State<ChangePasswordScreen> createState() =>
@@ -35,11 +33,17 @@ class _ChangePasswordScreenState
   final GlobalKey<FormState> formKey =
       GlobalKey<FormState>();
 
-  final AuthService authService = AuthService();
+  final AuthService authService =
+      AuthService();
 
-  final TokenStorage tokenStorage = TokenStorage();
+  final TokenStorage tokenStorage =
+      TokenStorage();
 
   bool isLoading = false;
+
+  bool obscureCurrentPassword = true;
+  bool obscureNewPassword = true;
+  bool obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -50,27 +54,29 @@ class _ChangePasswordScreenState
     super.dispose();
   }
 
-  // --------------------------------------------------
+  // ==========================================================================
   // CHANGE PASSWORD
-  // --------------------------------------------------
+  // ==========================================================================
 
   Future<void> changePassword() async {
+    if (isLoading) {
+      return;
+    }
+
     if (!formKey.currentState!.validate()) {
       return;
     }
 
-    if (isLoading) {
-      return;
-    }
+    FocusScope.of(context).unfocus();
 
     setState(() {
       isLoading = true;
     });
 
     try {
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
       // GET TOKEN
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
 
       final String? token =
           await tokenStorage.getToken();
@@ -81,9 +87,9 @@ class _ChangePasswordScreenState
         );
       }
 
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
       // CHANGE PASSWORD
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
 
       await authService.changePassword(
         currentPasswordController.text,
@@ -96,12 +102,14 @@ class _ChangePasswordScreenState
         'PASSWORD: password changed successfully',
       );
 
-      // --------------------------------------------------
-      // GET CURRENT USER
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
+      // GET UPDATED USER
+      // ----------------------------------------------------------------------
 
       final UserProfile user =
-          await authService.getCurrentUser(token);
+          await authService.getCurrentUser(
+        token,
+      );
 
       debugPrint(
         'PASSWORD: user = ${user.email}',
@@ -111,130 +119,134 @@ class _ChangePasswordScreenState
         'PASSWORD: role = ${user.role}',
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
       // SUCCESS MESSAGE
-      // --------------------------------------------------
+      // ----------------------------------------------------------------------
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Password changed successfully',
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Password changed successfully',
+            ),
+            behavior:
+                SnackBarBehavior.floating,
           ),
-          behavior: SnackBarBehavior.floating,
+        );
+
+      await Future.delayed(
+        const Duration(
+          milliseconds: 500,
         ),
       );
 
-      // Small delay so user can see success message.
-      await Future.delayed(
-        const Duration(milliseconds: 500),
-      );
+      if (!mounted) {
+        return;
+      }
 
-      if (!mounted) return;
+      // ----------------------------------------------------------------------
+      // ROLE-BASED NAVIGATION
+      // ----------------------------------------------------------------------
 
-      // --------------------------------------------------
-      // ROLE BASED NAVIGATION
-      // --------------------------------------------------
+      final String role =
+          user.role.trim().toUpperCase();
 
-      switch (user.role.toUpperCase()) {
-        // ==================================================
+      switch (role) {
+        // ====================================================================
         // ADMIN
-        // ==================================================
+        // ====================================================================
 
         case 'ADMIN':
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  AdminDashboardScreen(
+              builder: (_) =>
+                  AdminNavigationScreen(
                 user: user,
               ),
             ),
             (route) => false,
           );
-
           break;
 
-        // ==================================================
+        // ====================================================================
         // ORGANIZER
-        // ==================================================
+        // ====================================================================
 
         case 'ORGANIZER':
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) =>
+              builder: (_) =>
                   OrganizerDashboardScreen(
                 user: user,
               ),
             ),
             (route) => false,
           );
-
           break;
 
-        // ==================================================
+        // ====================================================================
         // STUDENT
-        // ==================================================
+        // ====================================================================
 
         case 'STUDENT':
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) =>
+              builder: (_) =>
                   HomeScreen(
                 user: user,
               ),
             ),
             (route) => false,
           );
-
           break;
 
-        // ==================================================
+        // ====================================================================
         // DEPARTMENT HEAD
-        // ==================================================
+        // ====================================================================
 
         case 'DEPARTMENT_HEAD':
-          debugPrint(
-            'PASSWORD: DEPARTMENT_HEAD detected',
-          );
-
           _showMessage(
-            'Department Head dashboard is being configured.',
+            'Department Head dashboard is not connected yet.',
           );
-
           break;
 
-        // ==================================================
+        // ====================================================================
         // ORGANIZATION HEAD
-        // ==================================================
+        // ====================================================================
 
         case 'ORGANIZATION_HEAD':
-          debugPrint(
-            'PASSWORD: ORGANIZATION_HEAD detected',
-          );
-
           _showMessage(
-            'Organization Head dashboard is being configured.',
+            'Organization Head dashboard is not connected yet.',
           );
-
           break;
 
-        // ==================================================
+        // ====================================================================
         // UNKNOWN ROLE
-        // ==================================================
+        // ====================================================================
 
         default:
+          debugPrint(
+            'PASSWORD: unknown role = $role',
+          );
+
           await tokenStorage.clearToken();
 
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
 
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
-              builder: (context) =>
+              builder: (_) =>
                   const LoginScreen(),
             ),
             (route) => false,
@@ -245,10 +257,12 @@ class _ChangePasswordScreenState
         'PASSWORD: change failed: $e',
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       _showMessage(
-        'Password change failed: ${e.toString()}',
+        'Password change failed: ${_cleanError(e)}',
       );
     } finally {
       if (mounted) {
@@ -259,217 +273,621 @@ class _ChangePasswordScreenState
     }
   }
 
-  // --------------------------------------------------
-  // MESSAGE
-  // --------------------------------------------------
+  // ==========================================================================
+  // ERROR CLEANUP
+  // ==========================================================================
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  String _cleanError(Object error) {
+    final String message =
+        error.toString();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    if (message.startsWith(
+      'Exception: ',
+    )) {
+      return message.substring(11);
+    }
+
+    return message;
   }
 
-  // --------------------------------------------------
-  // PASSWORD FIELD
-  // --------------------------------------------------
+  // ==========================================================================
+  // MESSAGE
+  // ==========================================================================
 
-  InputDecoration passwordDecoration(
-    String label,
+  void _showMessage(
+    String message,
   ) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior:
+              SnackBarBehavior.floating,
+        ),
+      );
+  }
+
+  // ==========================================================================
+  // PASSWORD FIELD DECORATION
+  // ==========================================================================
+
+  InputDecoration passwordDecoration({
+    required String label,
+    required bool obscure,
+    required VoidCallback onToggle,
+  }) {
     return InputDecoration(
       labelText: label,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
+
       prefixIcon: const Icon(
         Icons.lock_outline_rounded,
       ),
-    );
-  }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Change Password',
+      suffixIcon: IconButton(
+        tooltip: obscure
+            ? 'Show password'
+            : 'Hide password',
+        onPressed: onToggle,
+        icon: Icon(
+          obscure
+              ? Icons.visibility_outlined
+              : Icons.visibility_off_outlined,
         ),
       ),
 
-      // --------------------------------------------------
-      // BODY
-      // --------------------------------------------------
+      filled: true,
+      fillColor:
+          Colors.white.withOpacity(0.05),
 
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 500,
-              ),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
-                  children: [
-                    // --------------------------------------------------
-                    // ICON
-                    // --------------------------------------------------
+      border: OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide:
+            BorderSide.none,
+      ),
 
-                    const Icon(
-                      Icons.lock_reset_rounded,
-                      size: 70,
+      enabledBorder:
+          OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide:
+            BorderSide(
+          color:
+              Colors.white.withOpacity(
+            0.10,
+          ),
+        ),
+      ),
+
+      focusedBorder:
+          OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide:
+            const BorderSide(
+          color:
+              Color(0xFF9B7BFF),
+          width: 1.4,
+        ),
+      ),
+
+      errorBorder:
+          OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide:
+            const BorderSide(
+          color:
+              Colors.redAccent,
+        ),
+      ),
+
+      focusedErrorBorder:
+          OutlineInputBorder(
+        borderRadius:
+            BorderRadius.circular(14),
+        borderSide:
+            const BorderSide(
+          color:
+              Colors.redAccent,
+          width: 1.4,
+        ),
+      ),
+
+      contentPadding:
+          const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 17,
+      ),
+    );
+  }
+
+  // ==========================================================================
+  // BUILD
+  // ==========================================================================
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Scaffold(
+      resizeToAvoidBottomInset:
+          true,
+
+      body: Container(
+        decoration:
+            const BoxDecoration(
+          gradient:
+              LinearGradient(
+            begin:
+                Alignment.topLeft,
+            end:
+                Alignment.bottomRight,
+            colors: [
+              Color(0xFF060917),
+              Color(0xFF0B1430),
+              Color(0xFF171033),
+            ],
+          ),
+        ),
+
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.all(24),
+
+              child: ConstrainedBox(
+                constraints:
+                    const BoxConstraints(
+                  maxWidth: 520,
+                ),
+
+                child: Container(
+                  padding:
+                      const EdgeInsets.all(28),
+
+                  decoration:
+                      BoxDecoration(
+                    color: Colors.white
+                        .withOpacity(0.055),
+
+                    borderRadius:
+                        BorderRadius.circular(
+                      24,
                     ),
 
-                    const SizedBox(height: 20),
-
-                    // --------------------------------------------------
-                    // TITLE
-                    // --------------------------------------------------
-
-                    const Text(
-                      'Change your password',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.bold,
+                    border: Border.all(
+                      color: Colors.white
+                          .withOpacity(
+                        0.08,
                       ),
                     ),
 
-                    const SizedBox(height: 8),
-
-                    Text(
-                      'Enter your current password and choose a new one.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black
+                            .withOpacity(
+                          0.25,
+                        ),
+                        blurRadius: 30,
+                        offset:
+                            const Offset(
+                          0,
+                          14,
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 32),
+                  child: Form(
+                    key: formKey,
 
-                    // --------------------------------------------------
-                    // CURRENT PASSWORD
-                    // --------------------------------------------------
+                    child: Column(
+                      crossAxisAlignment:
+                          CrossAxisAlignment
+                              .stretch,
 
-                    TextFormField(
-                      controller:
-                          currentPasswordController,
-                      obscureText: true,
-                      decoration:
-                          passwordDecoration(
-                        'Current Password',
-                      ),
-                      validator: (value) {
-                        if (value == null ||
-                            value.isEmpty) {
-                          return 'Current password is required';
-                        }
+                      children: [
+                        // ======================================================
+                        // ICON
+                        // ======================================================
 
-                        return null;
-                      },
-                    ),
+                        Center(
+                          child: Container(
+                            width: 76,
+                            height: 76,
 
-                    const SizedBox(height: 16),
+                            decoration:
+                                BoxDecoration(
+                              gradient:
+                                  const LinearGradient(
+                                begin:
+                                    Alignment.topLeft,
+                                end:
+                                    Alignment.bottomRight,
+                                colors: [
+                                  Color(
+                                    0xFF6366F1,
+                                  ),
+                                  Color(
+                                    0xFF8B5CF6,
+                                  ),
+                                ],
+                              ),
 
-                    // --------------------------------------------------
-                    // NEW PASSWORD
-                    // --------------------------------------------------
+                              borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                22,
+                              ),
+                            ),
 
-                    TextFormField(
-                      controller:
-                          newPasswordController,
-                      obscureText: true,
-                      decoration:
-                          passwordDecoration(
-                        'New Password',
-                      ),
-                      validator: (value) {
-                        if (value == null ||
-                            value.isEmpty) {
-                          return 'New password is required';
-                        }
+                            child:
+                                const Icon(
+                              Icons
+                                  .lock_reset_rounded,
+                              color:
+                                  Colors.white,
+                              size: 38,
+                            ),
+                          ),
+                        ),
 
-                        if (value.length < 8) {
-                          return 'Password must be at least 8 characters';
-                        }
+                        const SizedBox(
+                          height: 22,
+                        ),
 
-                        return null;
-                      },
-                    ),
+                        // ======================================================
+                        // TITLE
+                        // ======================================================
 
-                    const SizedBox(height: 16),
+                        const Text(
+                          'Change your password',
+                          textAlign:
+                              TextAlign.center,
+                          style:
+                              TextStyle(
+                            color:
+                                Colors.white,
+                            fontSize: 26,
+                            fontWeight:
+                                FontWeight.w800,
+                          ),
+                        ),
 
-                    // --------------------------------------------------
-                    // CONFIRM PASSWORD
-                    // --------------------------------------------------
+                        const SizedBox(
+                          height: 8,
+                        ),
 
-                    TextFormField(
-                      controller:
-                          confirmPasswordController,
-                      obscureText: true,
-                      decoration:
-                          passwordDecoration(
-                        'Confirm New Password',
-                      ),
-                      validator: (value) {
-                        if (value == null ||
-                            value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
+                        Text(
+                          'Your account was created with your initial credentials. Set a new password to continue.',
+                          textAlign:
+                              TextAlign.center,
+                          style:
+                              TextStyle(
+                            color: Colors.white
+                                .withOpacity(
+                              0.52,
+                            ),
+                            fontSize: 13,
+                            height: 1.5,
+                          ),
+                        ),
 
-                        if (value !=
-                            newPasswordController.text) {
-                          return 'Passwords do not match';
-                        }
+                        const SizedBox(
+                          height: 30,
+                        ),
 
-                        return null;
-                      },
-                    ),
+                        // ======================================================
+                        // CURRENT PASSWORD
+                        // ======================================================
 
-                    const SizedBox(height: 28),
+                        TextFormField(
+                          controller:
+                              currentPasswordController,
+                          obscureText:
+                              obscureCurrentPassword,
 
-                    // --------------------------------------------------
-                    // BUTTON
-                    // --------------------------------------------------
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.white,
+                          ),
 
-                    SizedBox(
-                      height: 54,
-                      child: ElevatedButton(
-                        onPressed: isLoading
-                            ? null
-                            : changePassword,
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child:
-                                    CircularProgressIndicator(
-                                  strokeWidth: 2.5,
+                          decoration:
+                              passwordDecoration(
+                            label:
+                                'Current Password',
+                            obscure:
+                                obscureCurrentPassword,
+                            onToggle: () {
+                              setState(() {
+                                obscureCurrentPassword =
+                                    !obscureCurrentPassword;
+                              });
+                            },
+                          ),
+
+                          validator:
+                              (value) {
+                            if (value ==
+                                    null ||
+                                value
+                                    .trim()
+                                    .isEmpty) {
+                              return 'Current password is required';
+                            }
+
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(
+                          height: 16,
+                        ),
+
+                        // ======================================================
+                        // NEW PASSWORD
+                        // ======================================================
+
+                        TextFormField(
+                          controller:
+                              newPasswordController,
+                          obscureText:
+                              obscureNewPassword,
+
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.white,
+                          ),
+
+                          decoration:
+                              passwordDecoration(
+                            label:
+                                'New Password',
+                            obscure:
+                                obscureNewPassword,
+                            onToggle: () {
+                              setState(() {
+                                obscureNewPassword =
+                                    !obscureNewPassword;
+                              });
+                            },
+                          ),
+
+                          validator:
+                              (value) {
+                            if (value ==
+                                    null ||
+                                value.isEmpty) {
+                              return 'New password is required';
+                            }
+
+                            if (value.length <
+                                8) {
+                              return 'Password must be at least 8 characters';
+                            }
+
+                            if (value ==
+                                currentPasswordController
+                                    .text) {
+                              return 'New password must be different';
+                            }
+
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(
+                          height: 16,
+                        ),
+
+                        // ======================================================
+                        // CONFIRM PASSWORD
+                        // ======================================================
+
+                        TextFormField(
+                          controller:
+                              confirmPasswordController,
+                          obscureText:
+                              obscureConfirmPassword,
+
+                          style:
+                              const TextStyle(
+                            color:
+                                Colors.white,
+                          ),
+
+                          decoration:
+                              passwordDecoration(
+                            label:
+                                'Confirm New Password',
+                            obscure:
+                                obscureConfirmPassword,
+                            onToggle: () {
+                              setState(() {
+                                obscureConfirmPassword =
+                                    !obscureConfirmPassword;
+                              });
+                            },
+                          ),
+
+                          validator:
+                              (value) {
+                            if (value ==
+                                    null ||
+                                value.isEmpty) {
+                              return 'Please confirm your password';
+                            }
+
+                            if (value !=
+                                newPasswordController
+                                    .text) {
+                              return 'Passwords do not match';
+                            }
+
+                            return null;
+                          },
+                        ),
+
+                        const SizedBox(
+                          height: 24,
+                        ),
+
+                        // ======================================================
+                        // PASSWORD REQUIREMENT
+                        // ======================================================
+
+                        Container(
+                          padding:
+                              const EdgeInsets.all(
+                            14,
+                          ),
+
+                          decoration:
+                              BoxDecoration(
+                            color:
+                                const Color(
+                              0xFF6366F1,
+                            ).withOpacity(
+                              0.08,
+                            ),
+
+                            borderRadius:
+                                BorderRadius
+                                    .circular(
+                              14,
+                            ),
+
+                            border:
+                                Border.all(
+                              color:
+                                  const Color(
+                                0xFF6366F1,
+                              ).withOpacity(
+                                0.16,
+                              ),
+                            ),
+                          ),
+
+                          child: Row(
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start,
+                            children: [
+                              const Icon(
+                                Icons
+                                    .info_outline_rounded,
+                                color:
+                                    Color(
+                                  0xFFA78BFA,
                                 ),
-                              )
-                            : const Text(
-                                'Change Password',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight:
-                                      FontWeight.w600,
+                                size: 19,
+                              ),
+
+                              const SizedBox(
+                                width: 10,
+                              ),
+
+                              Expanded(
+                                child: Text(
+                                  'Use at least 8 characters for your new password.',
+                                  style:
+                                      TextStyle(
+                                    color: Colors
+                                        .white
+                                        .withOpacity(
+                                      0.60,
+                                    ),
+                                    fontSize:
+                                        12,
+                                    height: 1.4,
+                                  ),
                                 ),
                               ),
-                      ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(
+                          height: 24,
+                        ),
+
+                        // ======================================================
+                        // BUTTON
+                        // ======================================================
+
+                        SizedBox(
+                          height: 54,
+
+                          child:
+                              ElevatedButton(
+                            onPressed:
+                                isLoading
+                                    ? null
+                                    : changePassword,
+
+                            style:
+                                ElevatedButton
+                                    .styleFrom(
+                              backgroundColor:
+                                  const Color(
+                                0xFF7C3AED,
+                              ),
+
+                              foregroundColor:
+                                  Colors.white,
+
+                              disabledBackgroundColor:
+                                  const Color(
+                                0xFF7C3AED,
+                              ).withOpacity(
+                                0.35,
+                              ),
+
+                              shape:
+                                  RoundedRectangleBorder(
+                                borderRadius:
+                                    BorderRadius
+                                        .circular(
+                                  15,
+                                ),
+                              ),
+                            ),
+
+                            child: isLoading
+                                ? const SizedBox(
+                                    width:
+                                        23,
+                                    height:
+                                        23,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth:
+                                          2.5,
+                                      color:
+                                          Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Change Password',
+                                    style:
+                                        TextStyle(
+                                      fontSize:
+                                          15,
+                                      fontWeight:
+                                          FontWeight
+                                              .w700,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -479,4 +897,3 @@ class _ChangePasswordScreenState
     );
   }
 }
-
