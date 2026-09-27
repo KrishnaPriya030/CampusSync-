@@ -231,6 +231,30 @@ public class DepartmentHeadManagementService {
 
         return toResponse(head);
     }
+    // ============================================================
+// ADMIN RESET PASSWORD
+// ============================================================
+
+@Transactional
+public void resetPassword(Long id, String newPassword) {
+
+    DepartmentHead head =
+            departmentHeadRepository.findById(id)
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Department Head not found"));
+
+    User user = head.getUser();
+
+    user.setPassword(
+            passwordEncoder.encode(newPassword));
+
+    // Force the Department Head to change the password
+    // on the next login.
+    user.setFirstLogin(true);
+
+    userRepository.save(user);
+}
 
     // ============================================================
     // MAP ENTITY -> RESPONSE
