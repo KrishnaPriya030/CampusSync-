@@ -5,22 +5,21 @@ import '../services/auth_service.dart';
 import '../storage/token_storage.dart';
 
 import 'admin_navigation_screen.dart';
+import 'department_head_dashboard_screen.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
+import 'organization_head_dashboard_screen.dart';
 import 'organizer_dashboard_screen.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
-  const ChangePasswordScreen({
-    super.key,
-  });
+  const ChangePasswordScreen({super.key});
 
   @override
   State<ChangePasswordScreen> createState() =>
       _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState
-    extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final TextEditingController currentPasswordController =
       TextEditingController();
 
@@ -107,9 +106,7 @@ class _ChangePasswordScreenState
       // ----------------------------------------------------------------------
 
       final UserProfile user =
-          await authService.getCurrentUser(
-        token,
-      );
+          await authService.getCurrentUser(token);
 
       debugPrint(
         'PASSWORD: user = ${user.email}',
@@ -140,9 +137,7 @@ class _ChangePasswordScreenState
         );
 
       await Future.delayed(
-        const Duration(
-          milliseconds: 500,
-        ),
+        const Duration(milliseconds: 500),
       );
 
       if (!mounted) {
@@ -213,8 +208,13 @@ class _ChangePasswordScreenState
         // ====================================================================
 
         case 'DEPARTMENT_HEAD':
-          _showMessage(
-            'Department Head dashboard is not connected yet.',
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const DepartmentHeadDashboardScreen(),
+            ),
+            (route) => false,
           );
           break;
 
@@ -223,8 +223,13 @@ class _ChangePasswordScreenState
         // ====================================================================
 
         case 'ORGANIZATION_HEAD':
-          _showMessage(
-            'Organization Head dashboard is not connected yet.',
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  const OrganizationHeadDashboardScreen(),
+            ),
+            (route) => false,
           );
           break;
 
@@ -337,6 +342,7 @@ class _ChangePasswordScreenState
       ),
 
       filled: true,
+
       fillColor:
           Colors.white.withOpacity(0.05),
 
@@ -354,9 +360,7 @@ class _ChangePasswordScreenState
         borderSide:
             BorderSide(
           color:
-              Colors.white.withOpacity(
-            0.10,
-          ),
+              Colors.white.withOpacity(0.10),
         ),
       ),
 
@@ -408,9 +412,7 @@ class _ChangePasswordScreenState
   // ==========================================================================
 
   @override
-  Widget build(
-    BuildContext context,
-  ) {
+  Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset:
           true,
@@ -450,33 +452,24 @@ class _ChangePasswordScreenState
 
                   decoration:
                       BoxDecoration(
-                    color: Colors.white
+                    color: const Color.fromRGBO(255, 255, 255, 1)
                         .withOpacity(0.055),
 
                     borderRadius:
-                        BorderRadius.circular(
-                      24,
-                    ),
+                        BorderRadius.circular(24),
 
                     border: Border.all(
                       color: Colors.white
-                          .withOpacity(
-                        0.08,
-                      ),
+                          .withOpacity(0.08),
                     ),
 
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black
-                            .withOpacity(
-                          0.25,
-                        ),
+                            .withOpacity(0.25),
                         blurRadius: 30,
                         offset:
-                            const Offset(
-                          0,
-                          14,
-                        ),
+                            const Offset(0, 14),
                       ),
                     ],
                   ),
@@ -486,8 +479,7 @@ class _ChangePasswordScreenState
 
                     child: Column(
                       crossAxisAlignment:
-                          CrossAxisAlignment
-                              .stretch,
+                          CrossAxisAlignment.stretch,
 
                       children: [
                         // ======================================================
@@ -508,20 +500,13 @@ class _ChangePasswordScreenState
                                 end:
                                     Alignment.bottomRight,
                                 colors: [
-                                  Color(
-                                    0xFF6366F1,
-                                  ),
-                                  Color(
-                                    0xFF8B5CF6,
-                                  ),
+                                  Color(0xFF6366F1),
+                                  Color(0xFF8B5CF6),
                                 ],
                               ),
 
                               borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                22,
-                              ),
+                                  BorderRadius.circular(22),
                             ),
 
                             child:
@@ -568,9 +553,7 @@ class _ChangePasswordScreenState
                           style:
                               TextStyle(
                             color: Colors.white
-                                .withOpacity(
-                              0.52,
-                            ),
+                                .withOpacity(0.52),
                             fontSize: 13,
                             height: 1.5,
                           ),
@@ -587,6 +570,7 @@ class _ChangePasswordScreenState
                         TextFormField(
                           controller:
                               currentPasswordController,
+
                           obscureText:
                               obscureCurrentPassword,
 
@@ -614,9 +598,7 @@ class _ChangePasswordScreenState
                               (value) {
                             if (value ==
                                     null ||
-                                value
-                                    .trim()
-                                    .isEmpty) {
+                                value.trim().isEmpty) {
                               return 'Current password is required';
                             }
 
@@ -635,6 +617,7 @@ class _ChangePasswordScreenState
                         TextFormField(
                           controller:
                               newPasswordController,
+
                           obscureText:
                               obscureNewPassword,
 
@@ -692,6 +675,7 @@ class _ChangePasswordScreenState
                         TextFormField(
                           controller:
                               confirmPasswordController,
+
                           obscureText:
                               obscureConfirmPassword,
 
@@ -743,48 +727,37 @@ class _ChangePasswordScreenState
 
                         Container(
                           padding:
-                              const EdgeInsets.all(
-                            14,
-                          ),
+                              const EdgeInsets.all(14),
 
                           decoration:
                               BoxDecoration(
                             color:
                                 const Color(
                               0xFF6366F1,
-                            ).withOpacity(
-                              0.08,
-                            ),
+                            ).withOpacity(0.08),
 
                             borderRadius:
-                                BorderRadius
-                                    .circular(
-                              14,
-                            ),
+                                BorderRadius.circular(14),
 
                             border:
                                 Border.all(
                               color:
                                   const Color(
                                 0xFF6366F1,
-                              ).withOpacity(
-                                0.16,
-                              ),
+                              ).withOpacity(0.16),
                             ),
                           ),
 
                           child: Row(
                             crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                                CrossAxisAlignment.start,
+
                             children: [
                               const Icon(
                                 Icons
                                     .info_outline_rounded,
                                 color:
-                                    Color(
-                                  0xFFA78BFA,
-                                ),
+                                    Color(0xFFA78BFA),
                                 size: 19,
                               ),
 
@@ -797,13 +770,9 @@ class _ChangePasswordScreenState
                                   'Use at least 8 characters for your new password.',
                                   style:
                                       TextStyle(
-                                    color: Colors
-                                        .white
-                                        .withOpacity(
-                                      0.60,
-                                    ),
-                                    fontSize:
-                                        12,
+                                    color: Colors.white
+                                        .withOpacity(0.60),
+                                    fontSize: 12,
                                     height: 1.4,
                                   ),
                                 ),
@@ -831,8 +800,7 @@ class _ChangePasswordScreenState
                                     : changePassword,
 
                             style:
-                                ElevatedButton
-                                    .styleFrom(
+                                ElevatedButton.styleFrom(
                               backgroundColor:
                                   const Color(
                                 0xFF7C3AED,
@@ -844,30 +812,22 @@ class _ChangePasswordScreenState
                               disabledBackgroundColor:
                                   const Color(
                                 0xFF7C3AED,
-                              ).withOpacity(
-                                0.35,
-                              ),
+                              ).withOpacity(0.35),
 
                               shape:
                                   RoundedRectangleBorder(
                                 borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  15,
-                                ),
+                                    BorderRadius.circular(15),
                               ),
                             ),
 
                             child: isLoading
                                 ? const SizedBox(
-                                    width:
-                                        23,
-                                    height:
-                                        23,
+                                    width: 23,
+                                    height: 23,
                                     child:
                                         CircularProgressIndicator(
-                                      strokeWidth:
-                                          2.5,
+                                      strokeWidth: 2.5,
                                       color:
                                           Colors.white,
                                     ),
@@ -876,11 +836,9 @@ class _ChangePasswordScreenState
                                     'Change Password',
                                     style:
                                         TextStyle(
-                                      fontSize:
-                                          15,
+                                      fontSize: 15,
                                       fontWeight:
-                                          FontWeight
-                                              .w700,
+                                          FontWeight.w700,
                                     ),
                                   ),
                           ),
