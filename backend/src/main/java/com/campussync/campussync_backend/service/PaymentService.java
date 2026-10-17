@@ -1,7 +1,8 @@
+
 package com.campussync.campussync_backend.service;
 
-import java.util.List;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,7 @@ import com.campussync.campussync_backend.entity.Student;
 import com.campussync.campussync_backend.entity.User;
 import com.campussync.campussync_backend.enums.EventRegistrationStatus;
 import com.campussync.campussync_backend.enums.PaymentStatus;
+import com.campussync.campussync_backend.exception.PaymentReservationExpiredException;
 import com.campussync.campussync_backend.repository.EventRegistrationRepository;
 import com.campussync.campussync_backend.repository.PaymentRepository;
 import com.campussync.campussync_backend.repository.StudentRepository;
@@ -39,7 +41,7 @@ public class PaymentService {
     // STUDENT SUBMITS PAYMENT REFERENCE
     // ============================================================
 
-    @Transactional
+    @Transactional(noRollbackFor = PaymentReservationExpiredException.class)
     public PaymentResponse submitPayment(
             Long userId,
             Long registrationId,
@@ -52,8 +54,7 @@ public class PaymentService {
                                         "Student account not found"));
 
         EventRegistration registration =
-                registrationRepository.findById(
-                        registrationId)
+                registrationRepository.findById(registrationId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Registration not found"));
@@ -66,8 +67,8 @@ public class PaymentService {
                     "You are not allowed to modify this registration");
         }
 
-        if (registration.getStatus() !=
-                EventRegistrationStatus.PAYMENT_PENDING) {
+        if (registration.getStatus()
+                != EventRegistrationStatus.PAYMENT_PENDING) {
 
             throw new RuntimeException(
                     "This registration is not awaiting payment");
@@ -86,36 +87,30 @@ public class PaymentService {
 
             registrationRepository.save(registration);
 
-            throw new RuntimeException(
-                    "Payment reservation has expired");
+            throw new PaymentReservationExpiredException();
         }
 
         Payment payment =
                 paymentRepository
-                        .findByRegistrationId(
-                                registrationId)
+                        .findByRegistrationId(registrationId)
                         .orElse(null);
 
         if (payment == null) {
 
             payment = new Payment();
 
-            payment.setRegistration(
-                    registration);
+            payment.setRegistration(registration);
 
             payment.setAmount(
                     registration.getEvent()
                             .getRegistrationFee());
 
-            payment.setStatus(
-                    PaymentStatus.PENDING);
+            payment.setStatus(PaymentStatus.PENDING);
 
-            payment.setCreatedAt(
-                    LocalDateTime.now());
+            payment.setCreatedAt(LocalDateTime.now());
         }
 
-        if (payment.getStatus() ==
-                PaymentStatus.PAID) {
+        if (payment.getStatus() == PaymentStatus.PAID) {
 
             throw new RuntimeException(
                     "Payment has already been completed");
@@ -124,14 +119,11 @@ public class PaymentService {
         payment.setPaymentReference(
                 request.paymentReference());
 
-        payment.setStatus(
-                PaymentStatus.PENDING);
+        payment.setStatus(PaymentStatus.PENDING);
 
-        payment.setUpdatedAt(
-                LocalDateTime.now());
+        payment.setUpdatedAt(LocalDateTime.now());
 
-        payment =
-                paymentRepository.save(payment);
+        payment = paymentRepository.save(payment);
 
         return toResponse(payment);
     }
@@ -153,8 +145,7 @@ public class PaymentService {
 
         Payment payment =
                 paymentRepository
-                        .findByRegistrationId(
-                                registrationId)
+                        .findByRegistrationId(registrationId)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Payment not found"));
@@ -175,8 +166,7 @@ public class PaymentService {
     // MAPPING
     // ============================================================
 
-    private PaymentResponse toResponse(
-            Payment payment) {
+    private PaymentResponse toResponse(Payment payment) {
 
         EventRegistration registration =
                 payment.getRegistration();
@@ -201,83 +191,142 @@ public class PaymentService {
                 payment.getPaidAt()
         );
     }
+
     // ============================================================
-// ORGANIZER: VIEW PAYMENT HISTORY
-// ============================================================
+    // ORGANIZER: VIEW PAYMENT HISTORY
+    // ============================================================
 
-@Transactional(readOnly = true)
-public List<PaymentResponse> getOrganizerPaymentHistory(
-        Long userId) {
+    @Transactional(readOnly = true)
+    public List<PaymentResponse> getOrganizerPaymentHistory(
+            Long userId) {
 
-    return paymentRepository
-            .findByRegistrationEventOrganizerUserIdOrderByCreatedAtDesc(
-                    userId)
-            .stream()
-            .map(this::toResponse)
-            .toList();
-}
-
-
-// ============================================================
-// ORGANIZER: APPROVE PAYMENT
-// ============================================================
-
-@Transactional
-public PaymentResponse approvePayment(
-        Long userId,
-        Long paymentId) {
-
-    Payment payment =
-            paymentRepository.findById(paymentId)
-                    .orElseThrow(() ->
-                            new RuntimeException(
-                                    "Payment not found"));
-
-    EventRegistration registration =
-            payment.getRegistration();
-
-    if (!registration.getEvent()
-            .getOrganizer()
-            .getUser()
-            .getId()
-            .equals(userId)) {
-
-        throw new RuntimeException(
-                "You are not allowed to verify this payment");
+        return paymentRepository
+                .findByRegistrationEventOrganizerUserIdOrderByCreatedAtDesc(
+                        userId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    if (payment.getStatus() !=
-            PaymentStatus.PENDING) {
+    // ============================================================
+    // ORGANIZER: APPROVE PAYMENT
+    // ============================================================
 
-        throw new RuntimeException(
-                "Payment is not pending verification");
-    }
+    @Transactional(noRollbackFor = PaymentReservationExpiredException.class)
+    public PaymentResponse approvePayment(
+            Long userId,
+            Long paymentId) {
 
-    if (registration.getStatus() !=
-            EventRegistrationStatus.PAYMENT_PENDING) {
+        Payment payment =
+                paymentRepository.findById(paymentId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Payment not found"));
 
-        throw new RuntimeException(
-                "Registration is not awaiting payment");
-    }
+        EventRegistration registration =
+                payment.getRegistration();
 
-    LocalDateTime now =
-            LocalDateTime.now();
+        if (!registration.getEvent()
+                .getOrganizer()
+                .getUser()
+                .getId()
+                .equals(userId)) {
 
-    /*
-     * Do not allow an expired payment reservation
-     * to become registered.
-     */
-    if (registration.getPaymentExpiresAt() == null ||
-            !now.isBefore(
-                    registration.getPaymentExpiresAt())) {
+            throw new RuntimeException(
+                    "You are not allowed to verify this payment");
+        }
 
-        payment.setStatus(
-                PaymentStatus.FAILED);
+        if (payment.getStatus() != PaymentStatus.PENDING) {
 
+            throw new RuntimeException(
+                    "Payment is not pending verification");
+        }
+
+        if (registration.getStatus()
+                != EventRegistrationStatus.PAYMENT_PENDING) {
+
+            throw new RuntimeException(
+                    "Registration is not awaiting payment");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Do not approve an expired payment reservation.
+        if (registration.getPaymentExpiresAt() == null ||
+                !now.isBefore(registration.getPaymentExpiresAt())) {
+
+            payment.setStatus(PaymentStatus.FAILED);
+            payment.setUpdatedAt(now);
+
+            paymentRepository.save(payment);
+
+            registration.setStatus(
+                    EventRegistrationStatus.CANCELLED);
+
+            registration.setPaymentExpiresAt(null);
+
+            registrationRepository.save(registration);
+
+            throw new PaymentReservationExpiredException();
+        }
+
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setPaidAt(now);
         payment.setUpdatedAt(now);
 
         paymentRepository.save(payment);
 
+        registration.setStatus(
+                EventRegistrationStatus.REGISTERED);
+
+        registration.setConfirmedAt(now);
+        registration.setPaymentExpiresAt(null);
+
+        registrationRepository.save(registration);
+
+        return toResponse(payment);
+    }
+
+    // ============================================================
+    // ORGANIZER: REJECT PAYMENT
+    // ============================================================
+
+    @Transactional
+    public PaymentResponse rejectPayment(
+            Long userId,
+            Long paymentId) {
+
+        Payment payment =
+                paymentRepository.findById(paymentId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Payment not found"));
+
+        EventRegistration registration =
+                payment.getRegistration();
+
+        if (!registration.getEvent()
+                .getOrganizer()
+                .getUser()
+                .getId()
+                .equals(userId)) {
+
+            throw new RuntimeException(
+                    "You are not allowed to verify this payment");
+        }
+
+        if (payment.getStatus() != PaymentStatus.PENDING) {
+
+            throw new RuntimeException(
+                    "Payment is not pending verification");
+        }
+
+        payment.setStatus(PaymentStatus.FAILED);
+        payment.setUpdatedAt(LocalDateTime.now());
+
+        paymentRepository.save(payment);
+
+        // Release the reserved seat.
         registration.setStatus(
                 EventRegistrationStatus.CANCELLED);
 
@@ -285,83 +334,6 @@ public PaymentResponse approvePayment(
 
         registrationRepository.save(registration);
 
-        throw new RuntimeException(
-                "Payment reservation has expired");
+        return toResponse(payment);
     }
-
-    payment.setStatus(
-            PaymentStatus.PAID);
-
-    payment.setPaidAt(now);
-    payment.setUpdatedAt(now);
-
-    paymentRepository.save(payment);
-
-    registration.setStatus(
-            EventRegistrationStatus.REGISTERED);
-
-    registration.setConfirmedAt(now);
-    registration.setPaymentExpiresAt(null);
-
-    registrationRepository.save(registration);
-
-    return toResponse(payment);
-}
-
-
-// ============================================================
-// ORGANIZER: REJECT PAYMENT
-// ============================================================
-
-@Transactional
-public PaymentResponse rejectPayment(
-        Long userId,
-        Long paymentId) {
-
-    Payment payment =
-            paymentRepository.findById(paymentId)
-                    .orElseThrow(() ->
-                            new RuntimeException(
-                                    "Payment not found"));
-
-    EventRegistration registration =
-            payment.getRegistration();
-
-    if (!registration.getEvent()
-            .getOrganizer()
-            .getUser()
-            .getId()
-            .equals(userId)) {
-
-        throw new RuntimeException(
-                "You are not allowed to verify this payment");
-    }
-
-    if (payment.getStatus() !=
-            PaymentStatus.PENDING) {
-
-        throw new RuntimeException(
-                "Payment is not pending verification");
-    }
-
-    payment.setStatus(
-            PaymentStatus.FAILED);
-
-    payment.setUpdatedAt(
-            LocalDateTime.now());
-
-    paymentRepository.save(payment);
-
-    /*
-     * Release the reserved seat.
-     */
-    registration.setStatus(
-            EventRegistrationStatus.CANCELLED);
-
-    registration.setPaymentExpiresAt(null);
-
-    registrationRepository.save(registration);
-
-    return toResponse(payment);
-}
 }

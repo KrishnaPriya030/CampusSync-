@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.service;
 
 import java.math.BigDecimal;
@@ -5,8 +6,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.json.JSONObject;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.campussync.campussync_backend.dto.RefundRequest;
 import com.campussync.campussync_backend.dto.RefundResponse;
@@ -18,6 +21,7 @@ import com.campussync.campussync_backend.enums.EventRegistrationStatus;
 import com.campussync.campussync_backend.enums.NotificationType;
 import com.campussync.campussync_backend.enums.PaymentStatus;
 import com.campussync.campussync_backend.enums.RefundStatus;
+import com.campussync.campussync_backend.repository.EventRegistrationRepository;
 import com.campussync.campussync_backend.repository.PaymentRepository;
 import com.campussync.campussync_backend.repository.RefundRepository;
 import com.campussync.campussync_backend.repository.StudentRepository;
@@ -30,6 +34,7 @@ public class RefundService {
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
     private final StudentRepository studentRepository;
+    private final EventRegistrationRepository registrationRepository;
     private final RazorpayClient razorpayClient;
     private final NotificationService notificationService;
 
@@ -37,19 +42,100 @@ public class RefundService {
             RefundRepository refundRepository,
             PaymentRepository paymentRepository,
             StudentRepository studentRepository,
+            EventRegistrationRepository registrationRepository,
             RazorpayClient razorpayClient,
             NotificationService notificationService) {
 
         this.refundRepository = refundRepository;
         this.paymentRepository = paymentRepository;
         this.studentRepository = studentRepository;
+        this.registrationRepository = registrationRepository;
         this.razorpayClient = razorpayClient;
         this.notificationService = notificationService;
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
+    // Lock registration first, then payment.
+    // ---------------------------------------------------------
+
+    private Payment lockPaymentAndRegistration(Long paymentId) {
+
+        Payment initial = paymentRepository.findById(paymentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Payment not found"));
+
+        if (initial.getRegistration() == null
+                || initial.getRegistration().getId() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Payment has no associated registration");
+        }
+
+        Long registrationId = initial.getRegistration().getId();
+
+        registrationRepository.findByIdForUpdate(registrationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Registration not found"));
+
+        Payment payment = paymentRepository.findByIdForUpdate(paymentId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Payment not found"));
+
+        if (payment.getRegistration() == null
+                || !registrationId.equals(payment.getRegistration().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Payment registration changed unexpectedly");
+        }
+
+        return payment;
+    }
+
+    private Refund lockRefundPaymentAndRegistration(Long refundId) {
+
+        Refund initialRefund = refundRepository.findById(refundId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Refund not found"));
+
+        if (initialRefund.getPayment() == null
+                || initialRefund.getPayment().getId() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Refund has no associated payment");
+        }
+
+        Long paymentId = initialRefund.getPayment().getId();
+
+        // This obtains registration then payment locks.
+        lockPaymentAndRegistration(paymentId);
+
+        // Re-read after acquiring the payment lock.
+        return refundRepository.findById(refundId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Refund not found"));
+    }
+
+    private void requireOrganizerOwnership(
+            Long userId,
+            EventRegistration registration) {
+
+        if (userId == null
+                || registration.getEvent() == null
+                || registration.getEvent().getOrganizer() == null
+                || registration.getEvent().getOrganizer().getUser() == null
+                || registration.getEvent().getOrganizer().getUser().getId() == null
+                || !registration.getEvent().getOrganizer()
+                        .getUser().getId().equals(userId)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to process this refund");
+        }
+    }
+
+    // ---------------------------------------------------------
     // STUDENT: REQUEST REFUND
-    // ============================================================
+    // ---------------------------------------------------------
 
     @Transactional
     public RefundResponse requestRefund(
@@ -57,120 +143,102 @@ public class RefundService {
             Long paymentId,
             RefundRequest request) {
 
-        Student student =
-                studentRepository.findByUserId(userId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Student account not found"));
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
 
-        Payment payment =
-                paymentRepository.findById(paymentId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Payment not found"));
+        if (paymentId == null || paymentId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "A valid payment ID is required");
+        }
 
-        EventRegistration registration =
-                payment.getRegistration();
+        if (request == null
+                || request.reason() == null
+                || request.reason().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "A refund reason is required");
+        }
 
-        if (!registration.getStudent()
-                .getId()
-                .equals(student.getId())) {
+        Student student = studentRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Student account not found"));
 
-            throw new RuntimeException(
+        Payment payment = lockPaymentAndRegistration(paymentId);
+        EventRegistration registration = payment.getRegistration();
+
+        if (registration.getStudent() == null
+                || !registration.getStudent().getId().equals(student.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
                     "You are not allowed to request this refund");
         }
 
-        if (payment.getStatus() !=
-                PaymentStatus.PAID) {
-
-            throw new RuntimeException(
-                    "Only paid payments can be refunded");
+        if (payment.getStatus() != PaymentStatus.PAID) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Only captured payments can be refunded");
         }
 
-        /*
-         * A real Razorpay payment ID is required
-         * for processing the refund.
-         */
-        if (payment.getRazorpayPaymentId() == null ||
-                payment.getRazorpayPaymentId().isBlank()) {
-
-            throw new RuntimeException(
-                    "Razorpay payment ID not found");
+        if (payment.getRazorpayPaymentId() == null
+                || payment.getRazorpayPaymentId().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "The Razorpay payment ID is missing");
         }
 
-        Refund existing =
-                refundRepository
-                        .findByPaymentId(paymentId)
-                        .orElse(null);
-
-        if (existing != null) {
-
-            throw new RuntimeException(
-                    "A refund request already exists");
+        if (payment.getAmount() == null
+                || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "The payment amount is invalid");
         }
 
-        /*
-         * Check the refund policy stored on the event.
-         *
-         * The current implementation only checks that
-         * a refund policy exists. It does not interpret
-         * the policy text automatically.
-         */
-        String policy =
-                registration.getEvent()
-                        .getRefundPolicy();
+        String policy = registration.getEvent().getRefundPolicy();
 
-        if (policy == null ||
-                policy.trim().isEmpty()) {
-
-            throw new RuntimeException(
+        if (policy == null || policy.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
                     "This event does not offer a refund policy");
         }
 
-        Refund refund =
-                new Refund();
+        if (refundRepository.findByPaymentId(paymentId).isPresent()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "A refund request already exists for this payment");
+        }
 
+        LocalDateTime now = LocalDateTime.now();
+
+        Refund refund = new Refund();
         refund.setPayment(payment);
+        refund.setAmount(payment.getAmount());
+        refund.setReason(request.reason().trim());
+        refund.setStatus(RefundStatus.PENDING);
+        refund.setRequestedAt(now);
 
-        refund.setAmount(
-                payment.getAmount());
+        Refund savedRefund = refundRepository.save(refund);
 
-        refund.setReason(
-                request.reason());
-
-        refund.setStatus(
-                RefundStatus.PENDING);
-
-        refund.setRequestedAt(
-                LocalDateTime.now());
-
-        refundRepository.save(refund);
-
-        /*
-         * Payment is now waiting for organizer
-         * refund processing.
-         */
-        payment.setStatus(
-                PaymentStatus.REFUND_PENDING);
-
-        payment.setUpdatedAt(
-                LocalDateTime.now());
-
+        payment.setStatus(PaymentStatus.REFUND_PENDING);
+        payment.setUpdatedAt(now);
         paymentRepository.save(payment);
 
-        registration.setStatus(
-                EventRegistrationStatus.REFUND_PENDING);
+        registration.setStatus(EventRegistrationStatus.REFUND_PENDING);
 
-        return toResponse(refund);
+        return toResponse(savedRefund);
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // STUDENT: REFUND HISTORY
-    // ============================================================
+    // ---------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public List<RefundResponse> getStudentRefundHistory(
-            Long userId) {
+    public List<RefundResponse> getStudentRefundHistory(Long userId) {
+
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
 
         return refundRepository
                 .findByPaymentRegistrationStudentUserIdOrderByRequestedAtDesc(
@@ -180,13 +248,17 @@ public class RefundService {
                 .toList();
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // ORGANIZER: REFUND HISTORY
-    // ============================================================
+    // ---------------------------------------------------------
 
     @Transactional(readOnly = true)
-    public List<RefundResponse> getOrganizerRefundHistory(
-            Long userId) {
+    public List<RefundResponse> getOrganizerRefundHistory(Long userId) {
+
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
 
         return refundRepository
                 .findByPaymentRegistrationEventOrganizerUserIdOrderByRequestedAtDesc(
@@ -196,9 +268,9 @@ public class RefundService {
                 .toList();
     }
 
-    // ============================================================
-    // ORGANIZER: APPROVE REFUND
-    // ============================================================
+    // ---------------------------------------------------------
+    // ORGANIZER: APPROVE AND PROCESS REFUND
+    // ---------------------------------------------------------
 
     @Transactional
     public RefundResponse approveRefund(
@@ -206,163 +278,111 @@ public class RefundService {
             Long refundId,
             String processingNote) {
 
-        Refund refund =
-                refundRepository.findById(refundId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Refund not found"));
-
-        Payment payment =
-                refund.getPayment();
-
-        EventRegistration registration =
-                payment.getRegistration();
-
-        /*
-         * Only the organizer who owns the event
-         * can approve the refund.
-         */
-        if (!registration.getEvent()
-                .getOrganizer()
-                .getUser()
-                .getId()
-                .equals(userId)) {
-
-            throw new RuntimeException(
-                    "You are not allowed to process this refund");
+        if (refundId == null || refundId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "A valid refund ID is required");
         }
 
-        if (refund.getStatus() !=
-                RefundStatus.PENDING) {
+        Refund refund = lockRefundPaymentAndRegistration(refundId);
+        Payment payment = refund.getPayment();
+        EventRegistration registration = payment.getRegistration();
 
-            throw new RuntimeException(
-                    "Refund is not pending");
+        requireOrganizerOwnership(userId, registration);
+
+        if (refund.getStatus() != RefundStatus.PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Refund is not pending");
         }
 
-        if (payment.getStatus() !=
-                PaymentStatus.REFUND_PENDING) {
-
-            throw new RuntimeException(
-                    "Payment is not awaiting refund");
+        if (payment.getStatus() != PaymentStatus.REFUND_PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Payment is not awaiting a refund");
         }
 
-        /*
-         * Razorpay payment ID is required to create
-         * the actual refund.
-         */
-        String razorpayPaymentId =
-                payment.getRazorpayPaymentId();
+        String razorpayPaymentId = payment.getRazorpayPaymentId();
 
-        if (razorpayPaymentId == null ||
-                razorpayPaymentId.isBlank()) {
-
-            throw new RuntimeException(
-                    "Razorpay payment ID not found");
+        if (razorpayPaymentId == null || razorpayPaymentId.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Razorpay payment ID is missing");
         }
 
-        /*
-         * Amount in our database is stored in RUPEES.
-         *
-         * Razorpay expects the refund amount in PAISE.
-         *
-         * Example:
-         * ₹100.00 -> 10000 paise
-         */
-        BigDecimal amountInRupees =
-                refund.getAmount();
+        BigDecimal refundAmount = refund.getAmount();
 
-        long amountInPaise =
-                amountInRupees
-                        .movePointRight(2)
-                        .longValueExact();
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Refund amount is invalid");
+        }
+
+        final long amountInPaise;
 
         try {
+            amountInPaise = refundAmount
+                    .movePointRight(2)
+                    .longValueExact();
+        } catch (ArithmeticException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Refund amount must have at most two decimal places",
+                    exception);
+        }
 
-            /*
-             * Create Razorpay refund request.
-             */
-            JSONObject refundRequest =
-                    new JSONObject();
+        try {
+            JSONObject refundRequest = new JSONObject();
+            refundRequest.put("amount", amountInPaise);
 
-            refundRequest.put(
-                    "amount",
-                    amountInPaise);
+            razorpayClient.payments.refund(
+                    razorpayPaymentId, refundRequest);
 
-            /*
-             * Create the actual refund in Razorpay.
-             */
-            com.razorpay.Refund razorpayRefund =
-                    razorpayClient
-                            .payments
-                            .refund(
-                                    razorpayPaymentId,
-                                    refundRequest);
+        } catch (RazorpayException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Razorpay could not process the refund",
+                    exception);
+        }
 
-            /*
-             * Razorpay successfully accepted the refund.
-             *
-             * We now update our local database.
-             */
-            refund.setStatus(
-                    RefundStatus.COMPLETED);
+        /*
+         * Razorpay accepted the refund request. Update local state.
+         * For production, reconcile gateway state if the database
+         * commit fails after the external refund succeeds.
+         */
+        LocalDateTime now = LocalDateTime.now();
 
-            refund.setProcessingNote(
-                    processingNote);
+        refund.setStatus(RefundStatus.COMPLETED);
+        refund.setProcessingNote(processingNote);
+        refund.setProcessedAt(now);
+        refundRepository.save(refund);
 
-            refund.setProcessedAt(
-                    LocalDateTime.now());
+        payment.setStatus(PaymentStatus.REFUNDED);
+        payment.setUpdatedAt(now);
+        paymentRepository.save(payment);
 
-            refundRepository.save(refund);
+        registration.setStatus(EventRegistrationStatus.REFUNDED);
 
-            payment.setStatus(
-                    PaymentStatus.REFUNDED);
-
-            payment.setUpdatedAt(
-                    LocalDateTime.now());
-
-            paymentRepository.save(payment);
-
-            registration.setStatus(
-                    EventRegistrationStatus.REFUNDED);
-
-            /*
-             * Notify the student only after the
-             * Razorpay refund was successfully accepted.
-             */
+        try {
             notificationService.createNotification(
-                    registration.getStudent()
-                            .getUser()
-                            .getId(),
+                    registration.getStudent().getUser().getId(),
                     "Refund Processed",
                     "Your refund of ₹"
                             + refund.getAmount()
-                            + " for the event \""
-                            + registration.getEvent()
-                                    .getTitle()
+                            + " for event \""
+                            + registration.getEvent().getTitle()
                             + "\" has been processed successfully.",
                     NotificationType.REFUND_PROCESSED,
-                    registration.getEvent()
-            );
-
-            return toResponse(refund);
-
-        } catch (RazorpayException e) {
-
-            /*
-             * Razorpay rejected/failed the refund.
-             *
-             * Do NOT mark the payment as REFUNDED.
-             */
-            throw new RuntimeException(
-                    "Razorpay refund failed: "
-                            + e.getMessage(),
-                    e);
+                    registration.getEvent());
+        } catch (RuntimeException exception) {
+            // Keep the refund state update from being undone solely
+            // because notification delivery failed.
+            org.slf4j.LoggerFactory.getLogger(RefundService.class)
+                    .error("Refund {} was accepted, but its notification failed",
+                            refundId, exception);
         }
+
+        return toResponse(refund);
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // ORGANIZER: REJECT REFUND
-    // ============================================================
+    // ---------------------------------------------------------
 
     @Transactional
     public RefundResponse rejectRefund(
@@ -370,86 +390,52 @@ public class RefundService {
             Long refundId,
             String processingNote) {
 
-        Refund refund =
-                refundRepository.findById(refundId)
-                        .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Refund not found"));
-
-        Payment payment =
-                refund.getPayment();
-
-        EventRegistration registration =
-                payment.getRegistration();
-
-        if (!registration.getEvent()
-                .getOrganizer()
-                .getUser()
-                .getId()
-                .equals(userId)) {
-
-            throw new RuntimeException(
-                    "You are not allowed to process this refund");
+        if (refundId == null || refundId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "A valid refund ID is required");
         }
 
-        if (refund.getStatus() !=
-                RefundStatus.PENDING) {
+        Refund refund = lockRefundPaymentAndRegistration(refundId);
+        Payment payment = refund.getPayment();
+        EventRegistration registration = payment.getRegistration();
 
-            throw new RuntimeException(
-                    "Refund is not pending");
+        requireOrganizerOwnership(userId, registration);
+
+        if (refund.getStatus() != RefundStatus.PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Refund is not pending");
         }
 
-        if (payment.getStatus() !=
-                PaymentStatus.REFUND_PENDING) {
-
-            throw new RuntimeException(
-                    "Payment is not awaiting refund");
+        if (payment.getStatus() != PaymentStatus.REFUND_PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Payment is not awaiting a refund");
         }
 
-        refund.setStatus(
-                RefundStatus.REJECTED);
+        LocalDateTime now = LocalDateTime.now();
 
-        refund.setProcessingNote(
-                processingNote);
-
-        refund.setProcessedAt(
-                LocalDateTime.now());
-
+        refund.setStatus(RefundStatus.REJECTED);
+        refund.setProcessingNote(processingNote);
+        refund.setProcessedAt(now);
         refundRepository.save(refund);
 
-        /*
-         * Refund was rejected, so the original payment
-         * remains successful.
-         */
-        payment.setStatus(
-                PaymentStatus.PAID);
-
-        payment.setUpdatedAt(
-                LocalDateTime.now());
-
+        payment.setStatus(PaymentStatus.PAID);
+        payment.setUpdatedAt(now);
         paymentRepository.save(payment);
 
-        registration.setStatus(
-                EventRegistrationStatus.REGISTERED);
+        registration.setStatus(EventRegistrationStatus.REGISTERED);
 
         return toResponse(refund);
     }
 
-    // ============================================================
+    // ---------------------------------------------------------
     // MAPPING
-    // ============================================================
+    // ---------------------------------------------------------
 
-    private RefundResponse toResponse(
-            Refund refund) {
+    private RefundResponse toResponse(Refund refund) {
 
-        Payment payment =
-                refund.getPayment();
-
-        EventRegistration registration =
-                payment.getRegistration();
-
-        Student student =
-                registration.getStudent();
+        Payment payment = refund.getPayment();
+        EventRegistration registration = payment.getRegistration();
+        Student student = registration.getStudent();
 
         return new RefundResponse(
                 refund.getId(),
@@ -464,7 +450,6 @@ public class RefundService {
                 refund.getStatus(),
                 refund.getRequestedAt(),
                 refund.getProcessedAt(),
-                refund.getProcessingNote()
-        );
+                refund.getProcessingNote());
     }
 }

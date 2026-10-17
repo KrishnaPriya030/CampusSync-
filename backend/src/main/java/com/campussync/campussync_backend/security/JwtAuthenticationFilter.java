@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.security;
 
 import java.io.IOException;
@@ -44,129 +45,109 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        String authHeader =
-                request.getHeader("Authorization");
+        String authHeader = request.getHeader("Authorization");
 
-        if (authHeader == null
-                || !authHeader.startsWith("Bearer ")) {
-
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(7).trim();
+
+        if (token.isEmpty()) {
+            rejectRequest(
+                    response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Invalid authentication token");
+            return;
+        }
 
         try {
-
-            // ====================================================
-            // CHECK TOKEN REVOCATION
-            // ====================================================
-
             if (tokenRevocationService.isRevoked(token)) {
-
-                response.setStatus(
-                        HttpServletResponse.SC_UNAUTHORIZED);
-
-                response.setContentType(
-                        "application/json");
-
-                response.getWriter().write(
-                        "{\"message\":\"Token has been revoked. Please login again.\"}"
-                );
-
+                rejectRequest(
+                        response,
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Token has been revoked. Please log in again");
                 return;
             }
 
-            // ====================================================
-            // EXTRACT EMAIL
-            // ====================================================
+            String email = jwtService.extractEmail(token);
 
-            String email =
-                    jwtService.extractEmail(token);
-
-            if (email != null
-                    && SecurityContextHolder
-                            .getContext()
-                            .getAuthentication() == null) {
-
-                User user =
-                        userRepository
-                                .findByEmail(email)
-                                .orElse(null);
-
-                if (user != null) {
-
-                    // ============================================
-                    // VALIDATE JWT
-                    // ============================================
-
-                    boolean valid =
-                            jwtService.isTokenValid(
-                                    token,
-                                    user.getEmail());
-
-                    if (valid) {
-
-                        // ========================================
-                        // CHECK ACCOUNT STATUS
-                        // ========================================
-
-                        if (user.getStatus()
-                                != UserStatus.ACTIVE) {
-
-                            filterChain.doFilter(
-                                    request,
-                                    response);
-
-                            return;
-                        }
-
-                        // ========================================
-                        // CREATE AUTHENTICATION
-                        // ========================================
-
-                        UsernamePasswordAuthenticationToken
-                                authentication =
-                                new UsernamePasswordAuthenticationToken(
-                                        user,
-                                        null,
-                                        List.of(
-                                                new SimpleGrantedAuthority(
-                                                        "ROLE_"
-                                                                + user.getRole()
-                                                                        .name()
-                                                )
-                                        )
-                                );
-
-                        // ========================================
-                        // SET SECURITY CONTEXT
-                        // ========================================
-
-                        SecurityContextHolder
-                                .getContext()
-                                .setAuthentication(
-                                        authentication);
-
-                        // ========================================
-                        // TEMPORARY DEBUG
-                        // ========================================
-
-                        System.out.println(
-                                "JWT AUTHORITY: "
-                                        + authentication
-                                                .getAuthorities());
-                    }
-                }
+            if (email == null || email.isBlank()) {
+                SecurityContextHolder.clearContext();
+                rejectRequest(
+                        response,
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid authentication token");
+                return;
             }
 
-        } catch (Exception e) {
+            // Stateless API requests should not carry an existing
+            // authenticated context from another request.
+            User user = userRepository.findByEmail(email).orElse(null);
 
-            // Invalid JWT — continue without authentication
-            SecurityContextHolder
-                    .clearContext();
+            if (user == null
+                    || !jwtService.isTokenValid(token, user.getEmail())) {
+
+                SecurityContextHolder.clearContext();
+                rejectRequest(
+                        response,
+                        HttpServletResponse.SC_UNAUTHORIZED,
+                        "Invalid authentication token");
+                return;
+            }
+
+            // Do not allow blocked, inactive, or otherwise non-active accounts.
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                SecurityContextHolder.clearContext();
+
+                rejectRequest(
+                        response,
+                        HttpServletResponse.SC_FORBIDDEN,
+                        "Your account is not active");
+                return;
+            }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            user,
+                            null,
+                            List.of(
+                                    new SimpleGrantedAuthority(
+                                            "ROLE_" + user.getRole().name())
+                            )
+                    );
+
+            SecurityContextHolder.clearContext();
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+        } catch (Exception exception) {
+            // Fail closed: an invalid token must not establish
+            // an authenticated security context.
+            SecurityContextHolder.clearContext();
+
+            rejectRequest(
+                    response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "Invalid or expired authentication token");
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void rejectRequest(
+            HttpServletResponse response,
+            int status,
+            String message) throws IOException {
+
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        // Messages are fixed strings, not user-provided input.
+        response.getWriter().write(
+                "{\"message\":\"" + message + "\"}");
     }
 }

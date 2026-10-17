@@ -1,9 +1,12 @@
 
 package com.campussync.campussync_backend.service;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.campussync.campussync_backend.dto.ChangePasswordRequest;
 import com.campussync.campussync_backend.dto.UserProfileResponse;
@@ -11,8 +14,6 @@ import com.campussync.campussync_backend.entity.User;
 import com.campussync.campussync_backend.exception.InvalidCredentialsException;
 import com.campussync.campussync_backend.exception.PasswordMismatchException;
 import com.campussync.campussync_backend.repository.UserRepository;
-
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Service
 public class UserService {
@@ -28,12 +29,10 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
     }
 
+    // GET PROFILE OF THE CURRENTLY AUTHENTICATED USER
     public UserProfileResponse getCurrentUser() {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
-
-        User user = (User) authentication.getPrincipal();
+        User user = getAuthenticatedUser();
 
         return new UserProfileResponse(
                 user.getId(),
@@ -43,17 +42,23 @@ public class UserService {
         );
     }
 
-    // ============================================================
-    // CHANGE PASSWORD - LOGGED IN USER
-    // ============================================================
-
+    // CHANGE PASSWORD OF THE CURRENTLY AUTHENTICATED USER
     public void changePassword(ChangePasswordRequest request) {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+        if (request == null
+                || request.getCurrentPassword() == null
+                || request.getNewPassword() == null
+                || request.getConfirmPassword() == null) {
 
-        User user = (User) authentication.getPrincipal();
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "All password fields are required"
+            );
+        }
 
+        User user = getAuthenticatedUser();
+
+        // Verify the current password.
         if (!passwordEncoder.matches(
                 request.getCurrentPassword(),
                 user.getPassword())) {
@@ -63,6 +68,7 @@ public class UserService {
             );
         }
 
+        // Verify that the new password and confirmation match.
         if (!request.getNewPassword().equals(
                 request.getConfirmPassword())) {
 
@@ -71,28 +77,45 @@ public class UserService {
             );
         }
 
+        // Store only the encoded password.
         user.setPassword(
                 passwordEncoder.encode(
                         request.getNewPassword()
                 )
         );
 
+        // Allow the user to continue beyond the first-login restriction.
         user.setFirstLogin(false);
 
         userRepository.save(user);
     }
 
-    // ============================================================
     // ADMIN RESET PASSWORD
-    // ============================================================
-
     public void resetPasswordByAdmin(
             Long userId,
             String newPassword) {
 
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid user ID"
+            );
+        }
+
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "New password is required"
+            );
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "User not found"
+                        )
+                );
 
         user.setPassword(
                 passwordEncoder.encode(newPassword)
@@ -103,5 +126,33 @@ public class UserService {
         user.setFirstLogin(true);
 
         userRepository.save(user);
+    }
+
+    // GET THE AUTHENTICATED USER SAFELY
+    private User getAuthenticatedUser() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext()
+                        .getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication required"
+            );
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (!(principal instanceof User)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid authenticated user"
+            );
+        }
+
+        return (User) principal;
     }
 }

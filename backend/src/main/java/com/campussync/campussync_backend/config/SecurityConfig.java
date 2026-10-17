@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.config;
 
 import java.util.List;
@@ -42,6 +43,8 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // Development origins. Add your trusted production frontend
+        // origin explicitly when deploying.
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "http://127.0.0.1:*"
@@ -64,10 +67,7 @@ public class SecurityConfig {
                 "X-Requested-With"
         ));
 
-        configuration.setExposedHeaders(List.of(
-                "Authorization"
-        ));
-
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
@@ -91,7 +91,7 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // Allow browser CORS preflight requests
+                // Browser CORS preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**")
                 .permitAll()
 
@@ -99,51 +99,72 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**")
                 .permitAll()
 
-                .requestMatchers("/uploads/**")
-                .permitAll()
-
                 .requestMatchers("/error")
                 .permitAll()
 
-                // Admin
+                // Certificate PDFs must be downloaded through the
+                // authenticated certificate endpoint, which checks
+                // that the requested certificate belongs to the student.
+                // Keep this rule BEFORE the general uploads rule.
+                .requestMatchers("/uploads/certificates/**")
+                .denyAll()
+
+                // Other uploads remain public for existing features
+                // such as event images, if served from this path.
+                .requestMatchers("/uploads/**")
+                .permitAll()
+
+                // Admin-only APIs
                 .requestMatchers("/api/admin/**")
                 .hasRole("ADMIN")
 
-                // Organizer
+                // Organizer-only APIs
                 .requestMatchers("/api/organizer/**")
                 .hasRole("ORGANIZER")
 
-                // Department Head
+                // Department Head APIs
                 .requestMatchers("/api/department-head/**")
                 .hasRole("DEPARTMENT_HEAD")
 
-                // Organization Head
+                // Organization Head APIs
                 .requestMatchers("/api/organization-head/**")
                 .hasRole("ORGANIZATION_HEAD")
 
-                // Student
+                // Student-only APIs
                 .requestMatchers("/api/student/**")
                 .hasRole("STUDENT")
 
-                // Everything else requires authentication
+                // Notifications are available to authenticated
+                // CampusSync roles. Ownership must also be checked
+                // in NotificationService.
+                .requestMatchers("/api/notifications/**")
+                .hasAnyRole(
+                        "ADMIN",
+                        "ORGANIZER",
+                        "DEPARTMENT_HEAD",
+                        "ORGANIZATION_HEAD",
+                        "STUDENT"
+                )
+
+                // All remaining routes require authentication
                 .anyRequest()
                 .authenticated()
             )
 
             .sessionManagement(session -> session
                 .sessionCreationPolicy(
-                    SessionCreationPolicy.STATELESS
+                        SessionCreationPolicy.STATELESS
                 )
             )
 
             .addFilterBefore(
-                jwtAuthenticationFilter,
-                UsernamePasswordAuthenticationFilter.class
+                    jwtAuthenticationFilter,
+                    UsernamePasswordAuthenticationFilter.class
             )
 
             .addFilterAfter(
-                firstLoginFilter,
-                JwtAuthenticationFilter.class
+                    firstLoginFilter,
+                    JwtAuthenticationFilter.class
             );
 
         return http.build();

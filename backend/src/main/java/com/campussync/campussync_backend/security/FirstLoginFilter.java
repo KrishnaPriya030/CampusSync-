@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.security;
 
 import java.io.IOException;
@@ -17,6 +18,9 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class FirstLoginFilter extends OncePerRequestFilter {
 
+    private static final String CHANGE_PASSWORD_PATH =
+            "/api/users/change-password";
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
@@ -27,30 +31,29 @@ public class FirstLoginFilter extends OncePerRequestFilter {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null
-                && authentication.isAuthenticated()
-                && authentication.getPrincipal() instanceof User user
-                && user.isFirstLogin()) {
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal() instanceof User user)
+                || !user.isFirstLogin()) {
 
-            String uri = request.getRequestURI();
+            filterChain.doFilter(request, response);
+            return;
+        }
 
-            boolean allowed =
-                    uri.equals("/api/users/change-password")
-                    || uri.startsWith("/api/auth/");
+        // getServletPath() avoids including a configured context path.
+        String path = request.getServletPath();
 
-            if (!allowed) {
+        boolean allowed =
+                CHANGE_PASSWORD_PATH.equals(path)
+                || path.startsWith("/api/auth/");
 
-                response.setStatus(
-                        HttpServletResponse.SC_FORBIDDEN);
-
-                response.setContentType("application/json");
-
-                response.getWriter().write(
-                        "{\"message\":\"Please change your password before accessing CampusSync.\"}"
-                );
-
-                return;
-            }
+        if (!allowed) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.setCharacterEncoding("UTF-8");
+            response.getWriter().write(
+                    "{\"message\":\"Please change your password before accessing CampusSync.\"}");
+            return;
         }
 
         filterChain.doFilter(request, response);

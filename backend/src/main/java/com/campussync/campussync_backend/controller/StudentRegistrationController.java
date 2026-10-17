@@ -1,151 +1,163 @@
-package com.campussync.campussync_backend.controller;
 
-import java.util.List;
+        package com.campussync.campussync_backend.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+        import java.util.List;
 
-import com.campussync.campussync_backend.dto.EventRegistrationResponse;
-import com.campussync.campussync_backend.dto.RazorpayOrderResponse;
-import com.campussync.campussync_backend.dto.RazorpayPaymentVerificationRequest;
-import com.campussync.campussync_backend.entity.User;
-import com.campussync.campussync_backend.enums.Role;
-import com.campussync.campussync_backend.service.PaidEventRegistrationService;
-import com.campussync.campussync_backend.service.RazorpayPaymentVerificationService;
-import com.campussync.campussync_backend.service.StudentCancellationService;
-import com.campussync.campussync_backend.service.StudentRegistrationService;
+        import jakarta.validation.Valid;
 
-@RestController
-@RequestMapping("/api/student/registrations")
-public class StudentRegistrationController {
+        import org.springframework.http.HttpStatus;
+        import org.springframework.http.ResponseEntity;
+        import org.springframework.security.core.Authentication;
+        import org.springframework.web.bind.annotation.*;
+        import org.springframework.web.server.ResponseStatusException;
 
-    private final StudentRegistrationService registrationService;
-    private final StudentCancellationService cancellationService;
-    private final PaidEventRegistrationService paidEventRegistrationService;
-    private final RazorpayPaymentVerificationService razorpayPaymentVerificationService;
+        import com.campussync.campussync_backend.dto.EventRegistrationResponse;
+        import com.campussync.campussync_backend.dto.RazorpayOrderResponse;
+        import com.campussync.campussync_backend.dto.RazorpayPaymentVerificationRequest;
+        import com.campussync.campussync_backend.entity.User;
+        import com.campussync.campussync_backend.enums.Role;
+        import com.campussync.campussync_backend.service.PaidEventRegistrationService;
+        import com.campussync.campussync_backend.service.RazorpayPaymentVerificationService;
+        import com.campussync.campussync_backend.service.StudentCancellationService;
+        import com.campussync.campussync_backend.service.StudentRegistrationService;
 
-    public StudentRegistrationController(
-            StudentRegistrationService registrationService,
-            StudentCancellationService cancellationService,
-            PaidEventRegistrationService paidEventRegistrationService,
-            RazorpayPaymentVerificationService razorpayPaymentVerificationService) {
+        @RestController
+        @RequestMapping("/api/student/registrations")
+        public class StudentRegistrationController {
 
-        this.registrationService = registrationService;
-        this.cancellationService = cancellationService;
-        this.paidEventRegistrationService = paidEventRegistrationService;
-        this.razorpayPaymentVerificationService =
-                razorpayPaymentVerificationService;
-    }
+        private final StudentRegistrationService registrationService;
+        private final StudentCancellationService cancellationService;
+        private final PaidEventRegistrationService paidEventRegistrationService;
+        private final RazorpayPaymentVerificationService razorpayPaymentVerificationService;
 
-    // Free event registration
-    @PostMapping("/event/{eventId}")
-    public ResponseEntity<EventRegistrationResponse> registerForEvent(
-            @PathVariable Long eventId,
-            Authentication authentication) {
+        public StudentRegistrationController(
+                StudentRegistrationService registrationService,
+                StudentCancellationService cancellationService,
+                PaidEventRegistrationService paidEventRegistrationService,
+                RazorpayPaymentVerificationService razorpayPaymentVerificationService) {
 
-        User user = getAuthenticatedStudent(authentication);
-
-        return ResponseEntity.ok(
-                registrationService.registerStudent(
-                        user.getId(),
-                        eventId
-                )
-        );
-    }
-
-    // Paid event - create Razorpay order
-    @PostMapping("/event/{eventId}/payment")
-    public ResponseEntity<RazorpayOrderResponse> createPaymentOrder(
-            @PathVariable Long eventId,
-            Authentication authentication) {
-
-        User user = getAuthenticatedStudent(authentication);
-
-        return ResponseEntity.ok(
-                paidEventRegistrationService.createOrder(
-                        user.getId(),
-                        eventId
-                )
-        );
-    }
-
-    // Verify Razorpay payment
-    @PostMapping("/payment/verify")
-    public ResponseEntity<String> verifyPayment(
-            @RequestBody RazorpayPaymentVerificationRequest request,
-            Authentication authentication) {
-
-        User user = getAuthenticatedStudent(authentication);
-
-        razorpayPaymentVerificationService.verifyPayment(
-                user.getId(),
-                request.razorpayOrderId(),
-                request.razorpayPaymentId(),
-                request.razorpaySignature()
-        );
-
-        return ResponseEntity.ok(
-                "Payment verified successfully and registration confirmed"
-        );
-    }
-
-    // Get student's registrations
-    @GetMapping
-    public ResponseEntity<List<EventRegistrationResponse>> getMyRegistrations(
-            Authentication authentication) {
-
-        User user = getAuthenticatedStudent(authentication);
-
-        return ResponseEntity.ok(
-                registrationService.getMyRegistrations(
-                        user.getId()
-                )
-        );
-    }
-
-    // Cancel registration
-    @PutMapping("/{registrationId}/cancel")
-    public ResponseEntity<EventRegistrationResponse> cancelRegistration(
-            @PathVariable Long registrationId,
-            Authentication authentication) {
-
-        User user = getAuthenticatedStudent(authentication);
-
-        return ResponseEntity.ok(
-                cancellationService.cancelRegistration(
-                        user.getId(),
-                        registrationId
-                )
-        );
-    }
-
-    private User getAuthenticatedStudent(
-            Authentication authentication) {
-
-        if (authentication == null
-                || !authentication.isAuthenticated()) {
-
-            throw new RuntimeException(
-                    "Student authentication required");
+                this.registrationService = registrationService;
+                this.cancellationService = cancellationService;
+                this.paidEventRegistrationService = paidEventRegistrationService;
+                this.razorpayPaymentVerificationService =
+                        razorpayPaymentVerificationService;
         }
 
-        Object principal = authentication.getPrincipal();
+        // FREE EVENT REGISTRATION
+        @PostMapping("/event/{eventId}")
+        public ResponseEntity<EventRegistrationResponse> registerForEvent(
+                @PathVariable Long eventId,
+                Authentication authentication) {
 
-        if (!(principal instanceof User)) {
+                User user = getAuthenticatedStudent(authentication);
 
-            throw new RuntimeException(
-                    "Invalid authenticated user");
+                return ResponseEntity.ok(
+                        registrationService.registerStudent(
+                                user.getId(),
+                                eventId
+                        )
+                );
         }
 
-        User user = (User) principal;
+        // PAID EVENT: CREATE RAZORPAY ORDER
+        @PostMapping("/event/{eventId}/payment")
+        public ResponseEntity<RazorpayOrderResponse> createPaymentOrder(
+                @PathVariable Long eventId,
+                Authentication authentication) {
 
-        if (user.getRole() != Role.STUDENT) {
+                User user = getAuthenticatedStudent(authentication);
 
-            throw new RuntimeException(
-                    "Student access required");
+                return ResponseEntity.ok(
+                        paidEventRegistrationService.createOrder(
+                                user.getId(),
+                                eventId
+                        )
+                );
         }
 
-        return user;
-    }
-}
+        // VERIFY RAZORPAY PAYMENT
+        @PostMapping("/payment/verify")
+        public ResponseEntity<String> verifyPayment(
+                @Valid @RequestBody RazorpayPaymentVerificationRequest request,
+                Authentication authentication) {
+
+                User user = getAuthenticatedStudent(authentication);
+
+                razorpayPaymentVerificationService.verifyPayment(
+                        user.getId(),
+                        request.razorpayOrderId(),
+                        request.razorpayPaymentId(),
+                        request.razorpaySignature()
+                );
+
+                return ResponseEntity.ok(
+                        "Payment verified successfully and registration confirmed"
+                );
+        }
+
+        // GET THE CURRENT STUDENT'S REGISTRATIONS
+        @GetMapping
+        public ResponseEntity<List<EventRegistrationResponse>> getMyRegistrations(
+                Authentication authentication) {
+
+                User user = getAuthenticatedStudent(authentication);
+
+                return ResponseEntity.ok(
+                        registrationService.getMyRegistrations(
+                                user.getId()
+                        )
+                );
+        }
+
+        // CANCEL A REGISTRATION
+        @PutMapping("/{registrationId}/cancel")
+        public ResponseEntity<EventRegistrationResponse> cancelRegistration(
+                @PathVariable Long registrationId,
+                Authentication authentication) {
+
+                User user = getAuthenticatedStudent(authentication);
+
+                return ResponseEntity.ok(
+                        cancellationService.cancelRegistration(
+                                user.getId(),
+                                registrationId
+                        )
+                );
+        }
+
+        // VERIFY AUTHENTICATION AND STUDENT ROLE
+        private User getAuthenticatedStudent(
+                Authentication authentication) {
+
+                if (authentication == null
+                        || !authentication.isAuthenticated()) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Student authentication required"
+                );
+                }
+
+                Object principal = authentication.getPrincipal();
+
+                if (!(principal instanceof User)) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid authenticated user"
+                );
+                }
+
+                User user = (User) principal;
+
+                if (user.getRole() != Role.STUDENT) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Student access required"
+                );
+                }
+
+                return user;
+        }
+        }

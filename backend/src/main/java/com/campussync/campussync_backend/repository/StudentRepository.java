@@ -7,4 +7,5 @@ import com.campussync.campussync_backend.entity.Student;
 
 public interface StudentRepository extends JpaRepository<Student, Long> {
  Optional<Student> findByUserId(Long userId);
+ boolean existsByRegisterNumber(String registerNumber);
 }

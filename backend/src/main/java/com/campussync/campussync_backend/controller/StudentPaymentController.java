@@ -1,12 +1,16 @@
+
 package com.campussync.campussync_backend.controller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.campussync.campussync_backend.dto.PaymentResponse;
 import com.campussync.campussync_backend.dto.SubmitPaymentRequest;
 import com.campussync.campussync_backend.entity.User;
+import com.campussync.campussync_backend.enums.Role;
 import com.campussync.campussync_backend.service.PaymentService;
 
 import jakarta.validation.Valid;
@@ -17,9 +21,7 @@ public class StudentPaymentController {
 
     private final PaymentService paymentService;
 
-    public StudentPaymentController(
-            PaymentService paymentService) {
-
+    public StudentPaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
     }
 
@@ -29,14 +31,14 @@ public class StudentPaymentController {
             @Valid @RequestBody SubmitPaymentRequest request,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedStudent(authentication);
 
         return ResponseEntity.ok(
                 paymentService.submitPayment(
                         user.getId(),
                         registrationId,
-                        request)
+                        request
+                )
         );
     }
 
@@ -45,35 +47,40 @@ public class StudentPaymentController {
             @PathVariable Long registrationId,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedStudent(authentication);
 
         return ResponseEntity.ok(
                 paymentService.getPayment(
                         user.getId(),
-                        registrationId)
+                        registrationId
+                )
         );
     }
 
-    private User getAuthenticatedUser(
-            Authentication authentication) {
-
-        if (authentication == null ||
-                !authentication.isAuthenticated()) {
-
-            throw new RuntimeException(
-                    "Authentication required");
+    private User getAuthenticatedStudent(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication required"
+            );
         }
 
-        Object principal =
-                authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
 
-        if (!(principal instanceof User)) {
-
-            throw new RuntimeException(
-                    "Invalid authenticated user");
+        if (!(principal instanceof User user)) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Invalid authenticated user"
+            );
         }
 
-        return (User) principal;
+        if (user.getRole() != Role.STUDENT) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only students can access these endpoints"
+            );
+        }
+
+        return user;
     }
 }

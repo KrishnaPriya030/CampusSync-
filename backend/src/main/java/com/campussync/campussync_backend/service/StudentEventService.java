@@ -1,9 +1,12 @@
+
 package com.campussync.campussync_backend.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.campussync.campussync_backend.dto.EventResponse;
 import com.campussync.campussync_backend.entity.Event;
@@ -17,30 +20,23 @@ public class StudentEventService {
 
     private final EventRepository eventRepository;
 
-    public StudentEventService(
-            EventRepository eventRepository) {
-
+    public StudentEventService(EventRepository eventRepository) {
         this.eventRepository = eventRepository;
     }
 
-    // ============================================================
     // GET ALL PUBLISHED EVENTS
-    // ============================================================
-
     public List<EventResponse> getPublishedEvents() {
 
         return eventRepository
                 .findByStatusAndDeletedFalseOrderByStartDateTimeAsc(
-                        EventStatus.PUBLISHED)
+                        EventStatus.PUBLISHED
+                )
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    // ============================================================
-    // SEARCH & FILTER PUBLISHED EVENTS
-    // ============================================================
-
+    // SEARCH AND FILTER PUBLISHED EVENTS
     public List<EventResponse> searchEvents(
             String keyword,
             Long departmentId,
@@ -50,10 +46,16 @@ public class StudentEventService {
             LocalDateTime startDate,
             LocalDateTime endDate) {
 
-        // Convert blank keyword to null so that
-        // the repository treats it as "no keyword filter".
         if (keyword != null && keyword.isBlank()) {
             keyword = null;
+        }
+
+        if (startDate != null && endDate != null
+                && startDate.isAfter(endDate)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Start date must not be after end date"
+            );
         }
 
         return eventRepository
@@ -65,34 +67,51 @@ public class StudentEventService {
                         scope,
                         paymentType,
                         startDate,
-                        endDate)
+                        endDate
+                )
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    // ============================================================
-    // GET PUBLISHED EVENT
-    // ============================================================
-
+    // GET A SINGLE PUBLISHED EVENT
     public EventResponse getPublishedEvent(Long eventId) {
+
+        if (eventId == null || eventId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid event ID"
+            );
+        }
 
         Event event = eventRepository
                 .findByIdAndStatusAndDeletedFalse(
                         eventId,
-                        EventStatus.PUBLISHED)
+                        EventStatus.PUBLISHED
+                )
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Published event not found"));
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Published event not found"
+                        )
+                );
 
         return toResponse(event);
     }
 
-    // ============================================================
-    // RESPONSE MAPPING
-    // ============================================================
-
+    // MAP EVENT ENTITY TO STUDENT RESPONSE
     private EventResponse toResponse(Event event) {
+
+        if (event == null
+                || event.getOrganizer() == null
+                || event.getOrganizer().getUser() == null
+                || event.getOrganizer().getOrganization() == null) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Event data is incomplete"
+            );
+        }
 
         return new EventResponse(
                 event.getId(),
