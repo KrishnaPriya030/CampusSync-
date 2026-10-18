@@ -1,11 +1,6 @@
+
 package com.campussync.campussync_backend.dto;
 
-import jakarta.validation.constraints.NotBlank;
-
-public record RefundRequest(
-
-        @NotBlank
-        String reason
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -16,5 +11,3 @@ public record RefundRequest(
         String reason
 
 ) {}
-) {
-}
