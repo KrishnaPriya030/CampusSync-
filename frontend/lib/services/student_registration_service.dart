@@ -24,7 +24,7 @@ class StudentRegistrationService {
 
     final response = await http.post(
       Uri.parse(
-        '${ApiConfig.baseUrl}/api/student/registrations/event/$eventId',
+        '${ApiConfig.baseUrl}/api/student/events/$eventId/register',
       ),
       headers: {
         'Authorization': 'Bearer $token',
@@ -75,6 +75,8 @@ class StudentRegistrationService {
 
   // ------------------------------------------------------------
   // CREATE RAZORPAY PAYMENT ORDER
+  // NOTE: The payment-order route below was present in the existing frontend source,
+  // but was not verified against the supplied backend controller dump.
   // ------------------------------------------------------------
 
   Future<Map<String, dynamic>> createPaymentOrder(
@@ -141,6 +143,8 @@ class StudentRegistrationService {
 
   // ------------------------------------------------------------
   // VERIFY RAZORPAY PAYMENT
+  // NOTE: The verification route below was present in the existing frontend source,
+  // but was not verified against the supplied backend controller dump.
   // ------------------------------------------------------------
 
   Future<Map<String, dynamic>> verifyPayment({
