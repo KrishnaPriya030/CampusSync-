@@ -1,3 +1,4 @@
+
 package com.campussync.campussync_backend.controller;
 
 import java.util.Map;
@@ -19,43 +20,29 @@ public class PasswordResetController {
 
     public PasswordResetController(
             PasswordResetService passwordResetService) {
-
-        this.passwordResetService =
-                passwordResetService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(
-            @Valid @RequestBody
-            ForgotPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
 
-        String token =
-                passwordResetService
-                        .forgotPassword(request);
+        passwordResetService.forgotPassword(request);
 
-        return ResponseEntity.ok(
-                Map.of(
-                        "message",
-                        "Password reset token generated",
-                        "token",
-                        token
-                )
-        );
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "If an account exists for that email, password reset instructions will be sent."
+        ));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(
-            @Valid @RequestBody
-            ResetPasswordRequest request) {
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
 
-        passwordResetService.resetPassword(
-                request);
+        passwordResetService.resetPassword(request);
 
-        return ResponseEntity.ok(
-                Map.of(
-                        "message",
-                        "Password reset successfully"
-                )
-        );
+        return ResponseEntity.ok(Map.of(
+                "message", "Password reset successfully"
+        ));
     }
 }

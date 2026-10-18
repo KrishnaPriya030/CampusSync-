@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import com.campussync.campussync_backend.dto.AdminResetPasswordRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.campussync.campussync_backend.dto.AdminResetPasswordRequest;
+
 
 import com.campussync.campussync_backend.dto.BulkStudentImportResponse;
 import com.campussync.campussync_backend.dto.CreateDepartmentHeadRequest;
@@ -140,21 +140,6 @@ public ResponseEntity<String> resetPassword(
 // RESET PASSWORD
 // ============================================================
 
-@PutMapping("/{id}/reset-password")
-public ResponseEntity<String> resetPassword(
-        @PathVariable Long id,
-        @Valid @RequestBody AdminResetPasswordRequest request) {
 
-    if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-        return ResponseEntity.badRequest()
-                .body("New password and confirm password do not match");
-    }
-
-    departmentHeadService.resetPassword(
-            id,
-            request.getNewPassword());
-
-    return ResponseEntity.ok("Password reset successfully");
-}
 }
 
