@@ -1,6 +1,9 @@
 
 package com.campussync.campussync_backend.service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -25,7 +28,21 @@ public class EmailService {
             String recipientEmail,
             String token) {
 
-        String resetLink = passwordResetUrl + "?token=" + token;
+        // Encode the token so it is safe to include in a URL.
+        String encodedToken = URLEncoder.encode(
+                token,
+                StandardCharsets.UTF_8
+        );
+
+        // Append the token to the configured reset URL.
+        String separator = passwordResetUrl.contains("?")
+                ? "&"
+                : "?";
+
+        String resetLink = passwordResetUrl
+                + separator
+                + "token="
+                + encodedToken;
 
         SimpleMailMessage message = new SimpleMailMessage();
 
