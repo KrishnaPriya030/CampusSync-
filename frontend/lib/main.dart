@@ -1,7 +1,9 @@
+
 import 'package:flutter/material.dart';
 
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 void main() {
   runApp(const CampusSyncApp());
@@ -14,7 +16,6 @@ class CampusSyncApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       title: 'CampusSync',
 
       theme: ThemeData(
@@ -26,6 +27,25 @@ class CampusSyncApp extends StatelessWidget {
 
       routes: {
         '/login': (context) => const LoginScreen(),
+      },
+
+      onGenerateRoute: (settings) {
+        final routeUri = Uri.tryParse(
+          settings.name ?? '/',
+        );
+
+        if (routeUri?.path == '/reset-password') {
+          final token = routeUri?.queryParameters['token'] ?? '';
+
+          return MaterialPageRoute<void>(
+            settings: settings,
+            builder: (_) => ResetPasswordScreen(
+              token: token,
+            ),
+          );
+        }
+
+        return null;
       },
 
       home: const SplashScreen(),
