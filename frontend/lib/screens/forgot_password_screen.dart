@@ -45,66 +45,51 @@ class _ForgotPasswordScreenState
     super.dispose();
   }
 
-  Future<void> requestResetToken() async {
-    if (emailController.text.trim().isEmpty) {
-      _showError('Please enter your email.');
-      return;
-    }
+  
+Future<void> requestResetToken() async {
+  final email = emailController.text.trim();
 
-    if (!emailController.text.trim().contains('@')) {
-      _showError('Please enter a valid email.');
-      return;
-    }
+  if (email.isEmpty || !email.contains('@')) {
+    _showError('Please enter a valid email.');
+    return;
+  }
 
-    FocusScope.of(context).unfocus();
+  FocusScope.of(context).unfocus();
 
-    setState(() {
-      isLoading = true;
-    });
+  setState(() {
+    isLoading = true;
+  });
 
-    try {
-      final result =
-          await authService.forgotPassword(
-        emailController.text.trim(),
-      );
+  try {
+    await authService.forgotPassword(email);
 
-      if (!mounted) return;
+    if (!mounted) return;
 
-      final token = result['token']?.toString();
+    // The backend sends the reset token by email.
+    // It does not return the token in the API response.
+    _showSuccess(
+      'If an account exists for this email, '
+      'password reset instructions will be sent. '
+      'Please check your inbox and spam folder.',
+    );
+  } catch (e) {
+    if (!mounted) return;
 
-      if (token == null || token.isEmpty) {
-        throw Exception(
-          'Reset token was not returned by the server.',
-        );
-      }
-
-      tokenController.text = token;
-
+    _showError(
+      _cleanErrorMessage(
+        e,
+        fallback: 'Unable to request a password reset.',
+      ),
+    );
+  } finally {
+    if (mounted) {
       setState(() {
-        tokenGenerated = true;
+        isLoading = false;
       });
-
-      _showSuccess(
-        'Reset token generated. It is valid for 30 minutes.',
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      _showError(
-        _cleanErrorMessage(
-          e,
-          fallback:
-              'Unable to generate reset token.',
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
     }
   }
+}
+
 
   Future<void> resetPassword() async {
     if (!_formKey.currentState!.validate()) {
