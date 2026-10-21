@@ -14,10 +14,15 @@ class CampusSyncApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fragment = Uri.base.fragment;
+    final uri = Uri.tryParse(fragment);
+
+    final isResetRoute = uri?.path == '/reset-password';
+    final resetToken = uri?.queryParameters['token'] ?? '';
+
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'CampusSync',
-
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -25,30 +30,14 @@ class CampusSyncApp extends StatelessWidget {
         ),
       ),
 
+      // Use the reset screen directly when a reset link is opened.
+      home: isResetRoute
+          ? ResetPasswordScreen(token: resetToken)
+          : const SplashScreen(),
+
       routes: {
         '/login': (context) => const LoginScreen(),
       },
-
-      onGenerateRoute: (settings) {
-        final routeUri = Uri.tryParse(
-          settings.name ?? '/',
-        );
-
-        if (routeUri?.path == '/reset-password') {
-          final token = routeUri?.queryParameters['token'] ?? '';
-
-          return MaterialPageRoute<void>(
-            settings: settings,
-            builder: (_) => ResetPasswordScreen(
-              token: token,
-            ),
-          );
-        }
-
-        return null;
-      },
-
-      home: const SplashScreen(),
     );
   }
 }

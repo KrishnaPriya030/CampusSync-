@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../models/event.dart';
+import '../../services/organizer_event_service.dart';
 import '../../services/organizer_operations_service.dart';
 
 /// Payments, refunds, notifications, registrations, attendance and certificates.
@@ -18,7 +20,10 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
   static const _purple = Color(0xFF8B5CF6);
   static const _lavender = Color(0xFFC4B5FD);
   final _api = OrganizerOperationsService();
-  final _eventIdController = TextEditingController();
+  final _eventService = OrganizerEventService();
+  List<Event> _events = [];
+  int? _selectedEventId;
+  bool _eventsLoading = true;
   late final TabController _tabs;
   bool _loading = false;
   String? _error;
@@ -34,21 +39,41 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
     _tabs.addListener(() {
       if (!_tabs.indexIsChanging) _loadCurrent();
     });
-    _loadCurrent();
+    _loadEvents();
   }
 
   @override
   void dispose() {
     _tabs.dispose();
-    _eventIdController.dispose();
     super.dispose();
   }
 
-  int? get _eventId => int.tryParse(_eventIdController.text.trim());
+  int? get _eventId => _selectedEventId;
+
+  Future<void> _loadEvents() async {
+    try {
+      final events = await _eventService.getMyEvents();
+      if (!mounted) return;
+      setState(() {
+        _events = events;
+        _eventsLoading = false;
+        if (_selectedEventId != null && !events.any((e) => e.id == _selectedEventId)) {
+          _selectedEventId = null;
+        }
+        if (_selectedEventId == null && events.isNotEmpty) {
+          _selectedEventId = events.first.id;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _eventsLoading = false; _error = _cleanError(e); });
+    }
+    await _loadCurrent();
+  }
 
   Future<void> _loadCurrent() async {
     if (!mounted) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _items = []; });
     try {
       List<Map<String, dynamic>> items;
       switch (_tabs.index) {
@@ -78,7 +103,7 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
             if (regId != null) byRegistration[regId] = row;
           }
           items = registrations.map((r) {
-            final idValue = _int(r['id'] ?? r['registrationId']);
+            final idValue = _int(r['registrationId'] ?? r['id']);
             return <String, dynamic>{...r, '_attendance': idValue == null ? null : byRegistration[idValue]};
           }).toList();
           break;
@@ -154,12 +179,39 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
           const SizedBox(height: 5),
           Text('Payments, refunds, notifications and event operations', style: TextStyle(color: Colors.white.withOpacity(.62))),
           const SizedBox(height: 14),
-          if (eventScoped) Row(children: [
-            Expanded(child: TextField(controller: _eventIdController, keyboardType: TextInputType.number, style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(hintText: 'Enter event ID', hintStyle: const TextStyle(color: Colors.white38), prefixIcon: const Icon(Icons.event, color: _lavender), filled: true, fillColor: _surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)))),
-            const SizedBox(width: 8),
-            IconButton.filled(onPressed: _loadCurrent, icon: const Icon(Icons.search), style: IconButton.styleFrom(backgroundColor: _purple)),
-          ]),
+          if (eventScoped) ...[
+            DropdownButtonFormField<int>(
+              value: _events.any((e) => e.id == _selectedEventId) ? _selectedEventId : null,
+              isExpanded: true,
+              dropdownColor: _surface,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                labelText: _eventsLoading ? 'Loading your events…' : 'Select event',
+                labelStyle: const TextStyle(color: Colors.white70),
+                prefixIcon: const Icon(Icons.event_rounded, color: _lavender),
+                filled: true,
+                fillColor: _surface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+              ),
+              items: _events.map((event) => DropdownMenuItem<int>(
+                value: event.id,
+                child: Text('${event.title} • #${event.id}', overflow: TextOverflow.ellipsis),
+              )).toList(),
+              onChanged: _eventsLoading || _events.isEmpty ? null : (id) {
+                setState(() { _selectedEventId = id; });
+                _loadCurrent();
+              },
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: _eventsLoading ? null : _loadEvents,
+                icon: const Icon(Icons.refresh, size: 17),
+                label: const Text('Refresh events'),
+              ),
+            ),
+          ],
         ])),
         SizedBox(height: 48, child: TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start,
           indicatorColor: _lavender, labelColor: Colors.white, unselectedLabelColor: Colors.white54,
@@ -186,7 +238,7 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
 
   Widget _emptyView(bool eventScoped) => Center(child: Padding(padding: const EdgeInsets.all(28), child: Column(mainAxisSize: MainAxisSize.min, children: [
     Icon(_icons[_tabs.index], color: _lavender, size: 42), const SizedBox(height: 12),
-    Text(eventScoped && (_eventId == null || _eventId! <= 0) ? 'Enter an event ID above' : 'No ${_labels[_tabs.index].toLowerCase()} found', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+    Text(eventScoped && (_eventId == null || _eventId! <= 0) ? (_eventsLoading ? 'Loading your events…' : 'Select one of your events above') : 'No ${_labels[_tabs.index].toLowerCase()} found', style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
     const SizedBox(height: 6), const Text('Pull down to refresh after making changes.', style: TextStyle(color: Colors.white54), textAlign: TextAlign.center),
   ])));
 
@@ -247,10 +299,10 @@ class _OrganizerOperationsScreenState extends State<OrganizerOperationsScreen>
     ]));
   }
 
-  Widget _registrationCard(Map<String, dynamic> row) => _card(child: _heading(_value(row, ['studentName', 'name'], fallback: 'Registration #${_value(row, ['id', 'registrationId'])}'), '${_value(row, ['email', 'studentEmail'])}  •  Reg. no: ${_value(row, ['registerNumber'])}', status: _status(row)));
+  Widget _registrationCard(Map<String, dynamic> row) => _card(child: _heading(_value(row, ['studentName', 'name'], fallback: 'Registration #${_value(row, ['registrationId', 'id'])}'), '${_value(row, ['email', 'studentEmail'])}  •  Reg. no: ${_value(row, ['registerNumber'])}', status: _status(row)));
 
   Widget _attendanceCard(Map<String, dynamic> row) {
-    final registrationId = _int(row['id'] ?? row['registrationId']);
+    final registrationId = _int(row['registrationId'] ?? row['id']);
     final studentName = _value(row, ['studentName', 'name'], fallback: 'Registration #${registrationId ?? '—'}');
     final attendance = row['_attendance'] is Map ? Map<String, dynamic>.from(row['_attendance'] as Map) : null;
     final current = _value(attendance ?? {}, ['status'], fallback: 'NOT MARKED').toUpperCase();

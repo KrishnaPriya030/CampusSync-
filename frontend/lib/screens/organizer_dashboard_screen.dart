@@ -6,8 +6,14 @@ import 'package:flutter/material.dart';
 import '../models/event.dart';
 import 'create_event_screen.dart';
 import 'organizer_operations_screen.dart';
+import 'organizer_notifications_screen.dart';
 import '../models/user_profile.dart';
+import '../storage/token_storage.dart';
+import 'login_screen.dart';
 import '../services/organizer_event_service.dart';
+import 'organizer_event_participants_screen.dart';
+import '../models/organizer_analytics.dart';
+import '../services/organizer_analytics_service.dart';
 
 class OrganizerDashboardScreen extends StatefulWidget {
   final UserProfile user;
@@ -30,6 +36,10 @@ class _OrganizerDashboardScreenState
   static const Color _card = Color(0xFF11152D);
 
   final OrganizerEventService _eventService = OrganizerEventService();
+  late final OrganizerAnalyticsService _analyticsService;
+  OrganizerAnalytics? _analytics;
+  bool _isLoadingAnalytics = false;
+  String? _analyticsError;
 
   int selectedIndex = 0;
   List<Event> _events = [];
@@ -40,7 +50,41 @@ class _OrganizerDashboardScreenState
   @override
   void initState() {
     super.initState();
+    _analyticsService = OrganizerAnalyticsService(
+      getToken: () => TokenStorage().getToken(),
+    );
     _loadEvents();
+    _loadAnalytics();
+  }
+
+  @override
+  void dispose() {
+    _analyticsService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAnalytics() async {
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingAnalytics = true;
+      _analyticsError = null;
+    });
+
+    try {
+      final result = await _analyticsService.fetchAnalytics();
+      if (!mounted) return;
+      setState(() {
+        _analytics = result;
+        _isLoadingAnalytics = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _analyticsError = _cleanError(error);
+        _isLoadingAnalytics = false;
+      });
+    }
   }
 
   Future<void> _loadEvents() async {
@@ -173,6 +217,8 @@ class _OrganizerDashboardScreenState
         return _buildAnalyticsPage();
       case 4:
         return const OrganizerOperationsScreen();
+      case 5:
+        return _buildProfilePage();
       default:
         return _buildDashboard();
     }
@@ -189,39 +235,35 @@ class _OrganizerDashboardScreenState
         children: [
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _greeting(),
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.60),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    const Text(
-                      'Organizer Dashboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 25,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              const Expanded(
+                child: Text(
+                  'Organizer Dashboard',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 25,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
               _iconButton(
                 Icons.notifications_none_rounded,
-                onTap: () => _showMessage(
-                  'Notification screen will be connected separately.',
-                ),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const OrganizerNotificationsScreen(),
+                    ),
+                  );
+                },
               ),
               const SizedBox(width: 8),
               _iconButton(
                 Icons.refresh_rounded,
                 onTap: _loadEvents,
+              ),
+              const SizedBox(width: 8),
+              _iconButton(
+                Icons.logout_rounded,
+                onTap: _logout,
               ),
             ],
           ),
@@ -321,11 +363,11 @@ _actionCard(
     );
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning 👋';
-    if (hour < 17) return 'Good afternoon 👋';
-    return 'Good evening 👋';
+  String get _organizationName {
+    final names = _events
+        .map((event) => event.organizationName.trim())
+        .where((name) => name.isNotEmpty);
+    return names.isNotEmpty ? names.first : 'Organization details unavailable';
   }
 
   Widget _profileCard() {
@@ -350,10 +392,11 @@ _actionCard(
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   widget.user.name,
+                  textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -365,6 +408,7 @@ _actionCard(
                 const SizedBox(height: 4),
                 Text(
                   widget.user.email,
+                  textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -373,10 +417,23 @@ _actionCard(
                   ),
                 ),
                 const SizedBox(height: 4),
+                Text(
+                  _organizationName,
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _lavender,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 const Text(
                   'ORGANIZER',
+                  textAlign: TextAlign.right,
                   style: TextStyle(
-                    color: _lavender,
+                    color: Colors.white54,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1,
@@ -518,10 +575,17 @@ onPressed: () async {
                 icon: Icons.groups_rounded,
                 title: event.title,
                 subtitle: 'Status: ${_formatStatus(event.status)}',
-                onTap: () => _showMessage(
-                  'Participant records for event ${event.id} '
-                  'will be connected after verifying the registration API.',
-                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => OrganizerEventParticipantsScreen(
+                        eventId: event.id,
+                        eventTitle: event.title,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -530,74 +594,212 @@ onPressed: () async {
   }
 
   Widget _buildAnalyticsPage() {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
-      children: [
-        _pageHeader(
-          'Event Analytics',
-          'A summary of your event records.',
-        ),
-        const SizedBox(height: 22),
-        if (_isLoadingEvents)
-          const Center(
-            child: CircularProgressIndicator(color: _lavender),
-          )
-        else if (_eventError != null)
-          _errorCard(_eventError!, _loadEvents)
-        else ...[
+    final analytics = _analytics;
+
+    return RefreshIndicator(
+      color: _purple,
+      backgroundColor: _card,
+      onRefresh: _loadAnalytics,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+        children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _statCard(
-                  icon: Icons.event_rounded,
-                  title: 'Total events',
-                  value: '${_events.length}',
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Event Analytics',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 27,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 7),
+                    Text(
+                      'Participants, payments and completed refunds from your backend.',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _statCard(
-                  icon: Icons.public_rounded,
-                  title: 'Published',
-                  value: '$_publishedCount',
-                ),
+              const SizedBox(width: 8),
+              _iconButton(
+                Icons.refresh_rounded,
+                onTap: _isLoadingAnalytics ? () {} : _loadAnalytics,
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _statCard(
-                  icon: Icons.pending_actions_rounded,
-                  title: 'Pending',
-                  value: '$_pendingCount',
-                ),
+          const SizedBox(height: 22),
+          if (_isLoadingAnalytics && analytics == null)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Center(
+                child: CircularProgressIndicator(color: _lavender),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _statCard(
-                  icon: Icons.event_available_rounded,
-                  title: 'Completed',
-                  value: '$_completedCount',
+            )
+          else if (_analyticsError != null && analytics == null)
+            _errorCard(_analyticsError!, _loadAnalytics)
+          else if (analytics != null) ...[
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF25205A), Color(0xFF5B35A8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Colors.white12),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _glassCard(
-            child: const Text(
-              'Participant totals and revenue analytics require '
-              'their corresponding backend data.',
-              style: TextStyle(
-                color: Colors.white70,
-                height: 1.5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Confirmed participants',
+                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${analytics.totalParticipants}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 34,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${analytics.totalEvents} total events',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  if (_isLoadingAnalytics) ...[
+                    const SizedBox(height: 12),
+                    const LinearProgressIndicator(
+                      color: Colors.white,
+                      backgroundColor: Colors.white24,
+                    ),
+                  ],
+                ],
               ),
             ),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 700 ? 3 : 2;
+                final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    SizedBox(
+                      width: width,
+                      child: _statCard(
+                        icon: Icons.account_balance_wallet_outlined,
+                        title: 'Gross revenue',
+                        value: _formatMoney(analytics.grossRevenue),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _statCard(
+                        icon: Icons.currency_exchange_rounded,
+                        title: 'Completed refunds',
+                        value: _formatMoney(analytics.completedRefunds),
+                      ),
+                    ),
+                    SizedBox(
+                      width: width,
+                      child: _statCard(
+                        icon: Icons.trending_up_rounded,
+                        title: 'Net revenue',
+                        value: _formatMoney(analytics.netRevenue),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 26),
+            _sectionTitle('Event-wise performance'),
+            const SizedBox(height: 14),
+            if (analytics.events.isEmpty)
+              _emptyState(
+                icon: Icons.event_busy_rounded,
+                title: 'No events found',
+                subtitle: 'Your event analytics will appear here.',
+              )
+            else
+              ...analytics.events.map((event) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _analyticsEventCard(event),
+                  )),
+            if (_analyticsError != null) ...[
+              const SizedBox(height: 8),
+              _errorCard(_analyticsError!, _loadAnalytics),
+            ],
+            const SizedBox(height: 8),
+            const Text(
+              'Participants count registrations currently marked REGISTERED. Net revenue equals captured payments minus refunds marked COMPLETED.',
+              style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.5),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatMoney(double amount) => '₹${amount.toStringAsFixed(2)}';
+
+  Widget _analyticsEventCard(EventAnalytics event) {
+    return _glassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            event.eventTitle,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _detailRow(Icons.people_alt_outlined, '${event.totalParticipants} confirmed participants'),
+          const SizedBox(height: 10),
+          _detailRow(Icons.account_balance_wallet_outlined, 'Gross: ${_formatMoney(event.grossRevenue)}'),
+          const SizedBox(height: 10),
+          _detailRow(Icons.currency_exchange_rounded, 'Refunds: ${_formatMoney(event.completedRefunds)}'),
+          const SizedBox(height: 12),
+          Divider(color: Colors.white.withOpacity(0.12)),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Net revenue',
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Text(
+                _formatMoney(event.netRevenue),
+                style: const TextStyle(
+                  color: _lavender,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ],
-      ],
+      ),
     );
   }
 
@@ -819,6 +1021,52 @@ onPressed: () async {
       },
     );
   }
+  Future<void> _logout() async {
+  final shouldLogout = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Logout'),
+      content: const Text(
+        'Are you sure you want to log out?',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () =>
+              Navigator.pop(dialogContext, false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () =>
+              Navigator.pop(dialogContext, true),
+          child: const Text('Logout'),
+        ),
+      ],
+    ),
+  );
+
+  if (shouldLogout != true || !mounted) return;
+
+  try {
+    await TokenStorage().clearToken();
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+      (route) => false,
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Logout failed: $e'),
+      ),
+    );
+  }
+}
 
   Future<void> _handleEventAction(
     Event event,
@@ -1111,6 +1359,84 @@ onPressed: () async {
     );
   }
 
+  Widget _buildProfilePage() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+      children: [
+        _pageHeader('My Profile', 'View your CampusSync organizer account details.'),
+        const SizedBox(height: 22),
+        Container(
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: _card,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 38,
+                backgroundColor: _purple.withOpacity(0.22),
+                child: Text(
+                  widget.user.name.trim().isEmpty ? 'O' : widget.user.name.trim()[0].toUpperCase(),
+                  style: const TextStyle(color: _lavender, fontSize: 28, fontWeight: FontWeight.w700),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(widget.user.name, textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(widget.user.role, style: const TextStyle(color: _lavender, fontSize: 12)),
+              const SizedBox(height: 22),
+              _profileDetailRow(Icons.email_outlined, 'Email', widget.user.email),
+              const SizedBox(height: 12),
+              _profileDetailRow(Icons.badge_outlined, 'User ID', widget.user.id.toString()),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _logout,
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('Log out'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.redAccent,
+              side: BorderSide(color: Colors.redAccent.withOpacity(0.45)),
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _profileDetailRow(IconData icon, String label, String value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: _lavender, size: 20),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: const TextStyle(color: Colors.white54, fontSize: 11)),
+            const SizedBox(height: 3),
+            Text(value.isEmpty ? 'Not provided' : value,
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              overflow: TextOverflow.ellipsis),
+          ])),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBottomNavigation() {
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
@@ -1156,6 +1482,11 @@ onPressed: () async {
                   index: 4,
                   icon: Icons.tune_rounded,
                   label: 'Manage',
+                ),
+                _navItem(
+                  index: 5,
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
                 ),
               ],
             ),

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 
 import '../../services/organizer_event_service.dart';
+import '../../services/certificate_template_service.dart';
+import 'certificate_designer_screen.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -13,6 +15,13 @@ class CreateEventScreen extends StatefulWidget {
 class _CreateEventScreenState extends State<CreateEventScreen> {
   final _formKey = GlobalKey<FormState>();
   final OrganizerEventService _eventService = OrganizerEventService();
+  final CertificateTemplateService _templateService =
+      CertificateTemplateService();
+
+  List<Map<String, dynamic>> _templates = [];
+  int? _selectedTemplateId;
+  bool _loadingTemplates = false;
+  String? _templateLoadError;
 
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -20,7 +29,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _capacityController = TextEditingController(text: '100');
   final _feeController = TextEditingController(text: '0');
   final _refundPolicyController = TextEditingController();
-  final _certificateTemplateController = TextEditingController();
 
   DateTime? _startDateTime;
   DateTime? _endDateTime;
@@ -40,6 +48,87 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   static const Color _lavender = Color(0xFFC4B5FD);
 
   @override
+  void initState() {
+    super.initState();
+    _loadCertificateTemplates();
+  }
+
+  Future<void> _loadCertificateTemplates() async {
+    if (!mounted) return;
+    setState(() {
+      _loadingTemplates = true;
+      _templateLoadError = null;
+    });
+
+    try {
+      final templates = await _templateService.getTemplates();
+      if (!mounted) return;
+
+      final usable = templates.where((template) {
+        final id = int.tryParse(template['id']?.toString() ?? '');
+        final name = template['name']?.toString().trim() ?? '';
+        return id != null && id > 0 && name.isNotEmpty;
+      }).toList();
+
+      setState(() {
+        _templates = usable;
+        if (_selectedTemplateId != null &&
+            !usable.any((t) => int.tryParse(t['id'].toString()) == _selectedTemplateId)) {
+          _selectedTemplateId = null;
+        }
+        _loadingTemplates = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadingTemplates = false;
+        _templateLoadError = error.toString().replaceFirst('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _designCertificate() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => CertificateDesignerScreen(
+          existingTemplate: _templates.cast<Map<String, dynamic>?>().firstWhere(
+            (template) => int.tryParse(template?['id']?.toString() ?? '') == _selectedTemplateId,
+            orElse: () => null,
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    final id = int.tryParse(result['id']?.toString() ?? '');
+    if (id == null || id <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Template was saved, but the server did not return a valid ID.')),
+      );
+      return;
+    }
+
+    setState(() {
+      final index = _templates.indexWhere(
+        (template) => int.tryParse(template['id']?.toString() ?? '') == id,
+      );
+      if (index >= 0) {
+        _templates[index] = Map<String, dynamic>.from(result);
+      } else {
+        _templates.add(Map<String, dynamic>.from(result));
+      }
+      _selectedTemplateId = id;
+      _templateLoadError = null;
+    });
+
+    // Reload the backend list so the dropdown stays in sync with saved templates.
+    await _loadCertificateTemplates();
+    if (!mounted) return;
+    setState(() => _selectedTemplateId = id);
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
@@ -47,7 +136,6 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     _capacityController.dispose();
     _feeController.dispose();
     _refundPolicyController.dispose();
-    _certificateTemplateController.dispose();
     super.dispose();
   }
 
@@ -211,22 +299,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       return;
     }
 
-    int? certificateTemplateId;
+    final int? certificateTemplateId = _selectedTemplateId;
 
-    if (_certificateEnabled) {
-      certificateTemplateId =
-          int.tryParse(_certificateTemplateController.text.trim());
-
-      if (certificateTemplateId == null || certificateTemplateId <= 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Enter a valid existing certificate template ID.',
-            ),
-          ),
-        );
-        return;
-      }
+    if (_certificateEnabled &&
+        (certificateTemplateId == null ||
+            !_templates.any((template) =>
+                int.tryParse(template['id']?.toString() ?? '') ==
+                certificateTemplateId))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select or design a certificate template first.'),
+        ),
+      );
+      return;
     }
 
     final eventData = <String, dynamic>{
@@ -489,32 +574,123 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
               ),
               if (_certificateEnabled) ...[
                 const SizedBox(height: 12),
-                _textField(
-                  controller: _certificateTemplateController,
-                  label: 'Certificate template ID',
-                  hint: 'Enter an existing template ID',
-                  icon: Icons.badge_outlined,
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (!_certificateEnabled) return null;
-
-                    final id = int.tryParse(value?.trim() ?? '');
-
-                    if (id == null || id <= 0) {
-                      return 'Enter a valid certificate template ID.';
-                    }
-
-                    return null;
-                  },
+                if (_loadingTemplates)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(
+                      child: CircularProgressIndicator(color: _lavender),
+                    ),
+                  )
+                else if (_templates.isEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _surface,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'No saved certificate templates found.',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        if (_templateLoadError != null) ...[
+                          const SizedBox(height: 6),
+                          Text(
+                            _templateLoadError!,
+                            style: const TextStyle(
+                              color: Colors.orangeAccent,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: _loadingTemplates ? null : _loadCertificateTemplates,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry loading templates'),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  DropdownButtonFormField<int>(
+                    value: _templates.any((template) =>
+                            int.tryParse(template['id']?.toString() ?? '') ==
+                            _selectedTemplateId)
+                        ? _selectedTemplateId
+                        : null,
+                    dropdownColor: _surface,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    decoration: InputDecoration(
+                      labelText: 'Certificate template',
+                      prefixIcon: const Icon(
+                        Icons.workspace_premium_outlined,
+                        color: _lavender,
+                      ),
+                      filled: true,
+                      fillColor: _surface,
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    ),
+                    items: _templates.map((template) {
+                      final id = int.parse(template['id'].toString());
+                      final name = template['name']?.toString().trim() ?? '';
+                      final type = template['templateType']?.toString() ?? '';
+                      return DropdownMenuItem<int>(
+                        value: id,
+                        child: Text(
+                          type.isEmpty ? name : '$name ($type)',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (id) => setState(() => _selectedTemplateId = id),
+                    validator: (id) => _certificateEnabled && id == null
+                        ? 'Select a certificate template.'
+                        : null,
+                  ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isSubmitting ? null : _designCertificate,
+                        icon: const Icon(Icons.design_services_outlined),
+                        label: const Text('Design Certificate'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: _purple),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      tooltip: 'Refresh saved templates',
+                      onPressed: _loadingTemplates ? null : _loadCertificateTemplates,
+                      icon: const Icon(Icons.refresh, color: _lavender),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Use an ID that already exists in the backend. '
-                  'This form does not create certificate templates.',
-                  style: TextStyle(
-                    color: Colors.white60,
-                    fontSize: 12,
-                  ),
+                  'Choose a saved template by name, or design a new one. '
+                  'The template ID is linked automatically when the event is saved.',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
                 ),
               ],
               const SizedBox(height: 28),

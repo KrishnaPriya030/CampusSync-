@@ -1265,3 +1265,4 @@ class _ManagementCard
     );
   }
 }
+
