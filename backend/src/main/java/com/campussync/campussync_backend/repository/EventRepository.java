@@ -47,6 +47,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByScopeAndStatusAndDeletedFalse(
             EventScope scope,
             EventStatus status);
+            List<Event> findByDeletedFalseOrderByCreatedAtDesc();
+
 
     // ============================================================
     // STUDENT EVENT SEARCH & FILTER

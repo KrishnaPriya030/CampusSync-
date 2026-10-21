@@ -4,17 +4,17 @@ package com.campussync.campussync_backend.repository;
 import java.util.List;
 import java.util.Optional;
 
+import com.campussync.campussync_backend.enums.EventScope;
+import com.campussync.campussync_backend.entity.Payment;
+
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.campussync.campussync_backend.entity.Payment;
-
-import jakarta.persistence.LockModeType;
-
-public interface PaymentRepository
-        extends JpaRepository<Payment, Long> {
+public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     // ============================================================
     // NORMAL READ QUERIES
@@ -29,8 +29,7 @@ public interface PaymentRepository
     List<Payment> findByRegistrationEventIdOrderByCreatedAtDesc(
             Long eventId);
 
-    List<Payment>
-    findByRegistrationEventOrganizerUserIdOrderByCreatedAtDesc(
+    List<Payment> findByRegistrationEventOrganizerUserIdOrderByCreatedAtDesc(
             Long userId);
 
 
@@ -77,4 +76,39 @@ public interface PaymentRepository
             """)
     Optional<Payment> findByRazorpayOrderIdForUpdate(
             @Param("razorpayOrderId") String razorpayOrderId);
+
+
+    // ============================================================
+    // ORGANIZATION HEAD: EVENT PAYMENTS
+    // ============================================================
+
+    @Query("""
+            SELECT p
+            FROM Payment p
+            WHERE p.registration.event.deleted = false
+              AND p.registration.event.scope = :scope
+              AND p.registration.event.organizer.organization.id = :organizationId
+            ORDER BY p.createdAt DESC
+            """)
+    List<Payment> findOrganizationHeadPayments(
+            @Param("organizationId") Long organizationId,
+            @Param("scope") EventScope scope);
+
+
+    // ============================================================
+    // DEPARTMENT HEAD: EVENT PAYMENTS
+    // ============================================================
+
+    @Query("""
+            SELECT p
+            FROM Payment p
+            WHERE p.registration.event.deleted = false
+              AND p.registration.event.scope = :scope
+              AND p.registration.event.organizer.organization.department.id = :departmentId
+            ORDER BY p.createdAt DESC
+            """)
+    List<Payment> findDepartmentHeadPayments(
+            @Param("departmentId") Long departmentId,
+            @Param("scope") EventScope scope);
+
 }

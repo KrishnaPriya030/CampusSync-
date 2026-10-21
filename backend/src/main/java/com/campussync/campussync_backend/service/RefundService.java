@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,9 @@ import com.razorpay.RazorpayException;
 
 @Service
 public class RefundService {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(RefundService.class);
 
     private final RefundRepository refundRepository;
     private final PaymentRepository paymentRepository;
@@ -106,10 +111,8 @@ public class RefundService {
 
         Long paymentId = initialRefund.getPayment().getId();
 
-        // This obtains registration then payment locks.
         lockPaymentAndRegistration(paymentId);
 
-        // Re-read after acquiring the payment lock.
         return refundRepository.findById(refundId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Refund not found"));
@@ -194,6 +197,12 @@ public class RefundService {
                     "The payment amount is invalid");
         }
 
+        if (registration.getEvent() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "The registration has no associated event");
+        }
+
         String policy = registration.getEvent().getRefundPolicy();
 
         if (policy == null || policy.isBlank()) {
@@ -202,7 +211,8 @@ public class RefundService {
                     "This event does not offer a refund policy");
         }
 
-        if (refundRepository.findByPaymentId(paymentId).isPresent()) {
+        // findByPaymentId returns List<Refund>, not Optional<Refund>.
+        if (!refundRepository.findByPaymentId(paymentId).isEmpty()) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "A refund request already exists for this payment");
@@ -278,6 +288,11 @@ public class RefundService {
             Long refundId,
             String processingNote) {
 
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
+
         if (refundId == null || refundId <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "A valid refund ID is required");
@@ -308,7 +323,8 @@ public class RefundService {
 
         BigDecimal refundAmount = refund.getAmount();
 
-        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (refundAmount == null
+                || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Refund amount is invalid");
         }
@@ -340,11 +356,6 @@ public class RefundService {
                     exception);
         }
 
-        /*
-         * Razorpay accepted the refund request. Update local state.
-         * For production, reconcile gateway state if the database
-         * commit fails after the external refund succeeds.
-         */
         LocalDateTime now = LocalDateTime.now();
 
         refund.setStatus(RefundStatus.COMPLETED);
@@ -370,11 +381,10 @@ public class RefundService {
                     NotificationType.REFUND_PROCESSED,
                     registration.getEvent());
         } catch (RuntimeException exception) {
-            // Keep the refund state update from being undone solely
-            // because notification delivery failed.
-            org.slf4j.LoggerFactory.getLogger(RefundService.class)
-                    .error("Refund {} was accepted, but its notification failed",
-                            refundId, exception);
+            log.error(
+                    "Refund {} was accepted, but its notification failed",
+                    refundId,
+                    exception);
         }
 
         return toResponse(refund);
@@ -389,6 +399,11 @@ public class RefundService {
             Long userId,
             Long refundId,
             String processingNote) {
+
+        if (userId == null || userId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
 
         if (refundId == null || refundId <= 0) {
             throw new ResponseStatusException(

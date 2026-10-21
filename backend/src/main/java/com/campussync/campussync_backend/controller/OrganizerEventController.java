@@ -1,29 +1,42 @@
+
 package com.campussync.campussync_backend.controller;
 
 import java.util.List;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.campussync.campussync_backend.dto.CreateEventRequest;
 import com.campussync.campussync_backend.dto.EventResponse;
+import com.campussync.campussync_backend.dto.OrganizerAnalyticsResponse;
 import com.campussync.campussync_backend.dto.UpdateEventRequest;
 import com.campussync.campussync_backend.entity.User;
+import com.campussync.campussync_backend.service.OrganizerAnalyticsService;
 import com.campussync.campussync_backend.service.OrganizerEventService;
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/organizer/events")
 public class OrganizerEventController {
 
     private final OrganizerEventService eventService;
+    private final OrganizerAnalyticsService analyticsService;
 
     public OrganizerEventController(
-            OrganizerEventService eventService) {
+            OrganizerEventService eventService,
+            OrganizerAnalyticsService analyticsService) {
 
         this.eventService = eventService;
+        this.analyticsService = analyticsService;
     }
 
     // ============================================================
@@ -35,13 +48,11 @@ public class OrganizerEventController {
             @Valid @RequestBody CreateEventRequest request,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
-        EventResponse response =
-                eventService.create(
-                        user.getId(),
-                        request);
+        EventResponse response = eventService.create(
+                user.getId(),
+                request);
 
         return ResponseEntity.ok(response);
     }
@@ -54,12 +65,24 @@ public class OrganizerEventController {
     public ResponseEntity<List<EventResponse>> getMyEvents(
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
-                eventService.getMyEvents(
-                        user.getId()));
+                eventService.getMyEvents(user.getId()));
+    }
+
+    // ============================================================
+    // GET ORGANIZER ANALYTICS
+    // ============================================================
+
+    @GetMapping("/analytics")
+    public ResponseEntity<OrganizerAnalyticsResponse> getAnalytics(
+            Authentication authentication) {
+
+        User user = getAuthenticatedUser(authentication);
+
+        return ResponseEntity.ok(
+                analyticsService.getAnalytics(user.getId()));
     }
 
     // ============================================================
@@ -71,8 +94,7 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.getById(
@@ -90,8 +112,7 @@ public class OrganizerEventController {
             @Valid @RequestBody UpdateEventRequest request,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.update(
@@ -109,8 +130,7 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.submitForApproval(
@@ -127,8 +147,7 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         eventService.delete(
                 user.getId(),
@@ -146,8 +165,7 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.cancel(
@@ -164,8 +182,7 @@ public class OrganizerEventController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        User user =
-                getAuthenticatedUser(authentication);
+        User user = getAuthenticatedUser(authentication);
 
         return ResponseEntity.ok(
                 eventService.publish(
@@ -180,18 +197,16 @@ public class OrganizerEventController {
     private User getAuthenticatedUser(
             Authentication authentication) {
 
-        if (authentication == null ||
-                !authentication.isAuthenticated()) {
+        if (authentication == null
+                || !authentication.isAuthenticated()) {
 
             throw new RuntimeException(
                     "Organizer authentication required");
         }
 
-        Object principal =
-                authentication.getPrincipal();
+        Object principal = authentication.getPrincipal();
 
         if (!(principal instanceof User)) {
-
             throw new RuntimeException(
                     "Invalid authenticated user");
         }
