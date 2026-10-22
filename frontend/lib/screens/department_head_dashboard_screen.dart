@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'head_event_management_screen.dart';
+import 'head_finance_screen.dart';
+import 'notifications_screen.dart';
 class DepartmentHeadDashboardScreen extends StatefulWidget {
   const DepartmentHeadDashboardScreen({super.key});
 
@@ -17,6 +19,7 @@ class _DepartmentHeadDashboardScreenState
     _DepartmentHeadEventsTab(),
     _DepartmentHeadPaymentsTab(),
     _DepartmentHeadProfileTab(),
+    const NotificationsScreen(),
   ];
 
   @override
@@ -78,6 +81,11 @@ class _DepartmentHeadDashboardScreenState
                   icon: Icon(Icons.person_outline_rounded),
                   selectedIcon: Icon(Icons.person_rounded),
                   label: 'Profile',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.notifications_outlined),
+                  selectedIcon: Icon(Icons.notifications_rounded),
+                  label: 'Alerts',
                 ),
               ],
             ),
@@ -223,58 +231,8 @@ class _DepartmentHeadEventsTab extends StatelessWidget {
 
 class _DepartmentHeadPaymentsTab extends StatelessWidget {
   const _DepartmentHeadPaymentsTab();
-
   @override
-  Widget build(BuildContext context) {
-    return _PageBackground(
-      child: SafeArea(
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: _Header(
-                title: 'Payments',
-                subtitle: 'Department payment monitoring',
-              ),
-            ),
-
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: const [
-                    _PaymentSummaryCard(
-                      title: 'Total Payments',
-                      value: '₹0',
-                      icon: Icons.account_balance_wallet_rounded,
-                    ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Successful',
-                      value: '0',
-                      icon: Icons.check_circle_rounded,
-                    ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Pending',
-                      value: '0',
-                      icon: Icons.pending_rounded,
-                    ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Refunded',
-                      value: '0',
-                      icon: Icons.currency_exchange_rounded,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const HeadFinanceScreen(organizationHead: false);
 }
 
 // ============================================================

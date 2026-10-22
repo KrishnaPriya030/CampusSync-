@@ -1,5 +1,10 @@
+
 import 'package:flutter/material.dart';
+
 import 'head_event_management_screen.dart';
+import 'head_finance_screen.dart';
+import 'notifications_screen.dart';
+
 class OrganizationHeadDashboardScreen extends StatefulWidget {
   const OrganizationHeadDashboardScreen({super.key});
 
@@ -12,19 +17,49 @@ class _OrganizationHeadDashboardScreenState
     extends State<OrganizationHeadDashboardScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    _OrganizationHeadHomeTab(),
-    _OrganizationHeadEventsTab(),
-    _OrganizationHeadPaymentsTab(),
-    _OrganizationHeadProfileTab(),
-  ];
+  static const Color _primary = Color(0xFF6D45D8);
+  static const Color _background = Color(0xFFF6F7FB);
+
+  // Build only the selected tab. This avoids constructing all five
+  // screens simultaneously, as IndexedStack does.
+  Widget _buildSelectedScreen() {
+    switch (_currentIndex) {
+      case 0:
+        return const _OrganizationHeadHomeTab();
+
+      case 1:
+        return const _OrganizationHeadEventsTab();
+
+      case 2:
+        return const _OrganizationHeadPaymentsTab();
+
+      case 3:
+        return const _OrganizationHeadProfileTab();
+
+      case 4:
+        return const NotificationsScreen();
+
+      default:
+        return const _OrganizationHeadHomeTab();
+    }
+  }
+
+  void _selectTab(int index) {
+    if (index < 0 || index > 4 || index == _currentIndex) {
+      return;
+    }
+
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      backgroundColor: _background,
+      body: SafeArea(
+        child: _buildSelectedScreen(),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
@@ -32,6 +67,7 @@ class _OrganizationHeadDashboardScreenState
 
   Widget _buildBottomNavigationBar() {
     return SafeArea(
+      top: false,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
@@ -53,11 +89,7 @@ class _OrganizationHeadDashboardScreenState
               backgroundColor: Colors.transparent,
               elevation: 0,
               selectedIndex: _currentIndex,
-              onDestinationSelected: (index) {
-                setState(() {
-                  _currentIndex = index;
-                });
-              },
+              onDestinationSelected: _selectTab,
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.dashboard_outlined),
@@ -79,6 +111,11 @@ class _OrganizationHeadDashboardScreenState
                   selectedIcon: Icon(Icons.person_rounded),
                   label: 'Profile',
                 ),
+                NavigationDestination(
+                  icon: Icon(Icons.notifications_outlined),
+                  selectedIcon: Icon(Icons.notifications_rounded),
+                  label: 'Alerts',
+                ),
               ],
             ),
           ),
@@ -88,9 +125,8 @@ class _OrganizationHeadDashboardScreenState
   }
 }
 
-
 // ============================================================
-// HOME
+// HOME TAB
 // ============================================================
 
 class _OrganizationHeadHomeTab extends StatelessWidget {
@@ -99,116 +135,119 @@ class _OrganizationHeadHomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _PageBackground(
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const _Header(
-                title: 'Organization Head',
-                subtitle: 'Organization overview',
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _Header(
+              title: 'Organization Head',
+              subtitle: 'Organization overview',
+            ),
+            const SizedBox(height: 24),
+            const _WelcomeCard(),
+            const SizedBox(height: 24),
+            const Text(
+              'Overview',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF262342),
               ),
+            ),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 900
+                    ? 4
+                    : 2;
 
-              const SizedBox(height: 24),
-
-              _WelcomeCard(),
-
-              const SizedBox(height: 22),
-
-              const Text(
-                'Overview',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 900
-                      ? 4
-                      : constraints.maxWidth >= 600
-                          ? 2
-                          : 2;
-
-                  return GridView.count(
-                    crossAxisCount: columns,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.35,
-                    children: const [
-                      _StatCard(
-                        icon: Icons.event_rounded,
-                        title: 'Events',
-                        value: '0',
-                      ),
-                      _StatCard(
-                        icon: Icons.pending_actions_rounded,
-                        title: 'Pending',
-                        value: '0',
-                      ),
-                      _StatCard(
-                        icon: Icons.payments_rounded,
-                        title: 'Payments',
-                        value: '₹0',
-                      ),
-                      _StatCard(
-                        icon: Icons.people_alt_rounded,
-                        title: 'Registrations',
-                        value: '0',
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 24),
-
-              const Text(
-                'Quick Access',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _QuickActionCard(
-                      icon: Icons.pending_actions_rounded,
-                      title: 'Pending Approval',
-                      onTap: () {},
+                return GridView.count(
+                  crossAxisCount: columns,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: constraints.maxWidth < 400
+                      ? 1.05
+                      : 1.35,
+                  children: const [
+                    _StatCard(
+                      icon: Icons.event_rounded,
+                      title: 'Events',
+                      value: '—',
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _QuickActionCard(
+                    _StatCard(
+                      icon: Icons.pending_actions_rounded,
+                      title: 'Pending',
+                      value: '—',
+                    ),
+                    _StatCard(
                       icon: Icons.payments_rounded,
                       title: 'Payments',
-                      onTap: () {},
+                      value: '—',
                     ),
-                  ),
-                ],
+                    _StatCard(
+                      icon: Icons.people_alt_rounded,
+                      title: 'Registrations',
+                      value: '—',
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Quick Access',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF262342),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.event_available_rounded,
+                    title: 'Manage Events',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const _OrganizationHeadEventsTab(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _QuickActionCard(
+                    icon: Icons.payments_rounded,
+                    title: 'View Payments',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const _OrganizationHeadPaymentsTab(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-
 // ============================================================
-// EVENTS
+// EVENTS TAB
 // ============================================================
 
 class _OrganizationHeadEventsTab extends StatelessWidget {
@@ -223,7 +262,7 @@ class _OrganizationHeadEventsTab extends StatelessWidget {
 }
 
 // ============================================================
-// PAYMENTS
+// PAYMENTS TAB
 // ============================================================
 
 class _OrganizationHeadPaymentsTab extends StatelessWidget {
@@ -231,48 +270,95 @@ class _OrganizationHeadPaymentsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _PageBackground(
-      child: SafeArea(
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-              child: _Header(
-                title: 'Payments',
-                subtitle: 'Organization payment monitoring',
-              ),
-            ),
+    return const HeadFinanceScreen(
+      organizationHead: true,
+    );
+  }
+}
 
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: const [
-                    _PaymentSummaryCard(
-                      title: 'Total Payments',
-                      value: '₹0',
-                      icon: Icons.account_balance_wallet_rounded,
+// ============================================================
+// PROFILE TAB
+// ============================================================
+
+class _OrganizationHeadProfileTab extends StatelessWidget {
+  const _OrganizationHeadProfileTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return _PageBackground(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _Header(
+              title: 'Profile',
+              subtitle: 'Organization Head account',
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 38,
+                    backgroundColor: Colors.deepPurple.shade50,
+                    child: Icon(
+                      Icons.person_rounded,
+                      size: 42,
+                      color: Colors.deepPurple.shade400,
                     ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Successful',
-                      value: '0',
-                      icon: Icons.check_circle_rounded,
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Organization Head',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
                     ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Pending',
-                      value: '0',
-                      icon: Icons.pending_rounded,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Organization account',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
                     ),
-                    SizedBox(height: 12),
-                    _PaymentSummaryCard(
-                      title: 'Refunded',
-                      value: '0',
-                      icon: Icons.currency_exchange_rounded,
+                  ),
+                  const SizedBox(height: 24),
+                  const _ProfileInfoRow(
+                    icon: Icons.badge_outlined,
+                    title: 'Role',
+                    value: 'Organization Head',
+                  ),
+                  const _ProfileInfoRow(
+                    icon: Icons.business_outlined,
+                    title: 'Organization',
+                    value: 'Not loaded',
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Profile details will appear here when connected '
+                    'to the organization profile API.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -282,101 +368,8 @@ class _OrganizationHeadPaymentsTab extends StatelessWidget {
   }
 }
 
-
 // ============================================================
-// PROFILE
-// ============================================================
-
-class _OrganizationHeadProfileTab extends StatelessWidget {
-  const _OrganizationHeadProfileTab();
-
-  @override
-  Widget build(BuildContext context) {
-    return _PageBackground(
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const _Header(
-                title: 'Profile',
-                subtitle: 'Organization Head account',
-              ),
-
-              const SizedBox(height: 24),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 38,
-                      backgroundColor: Colors.deepPurple.shade50,
-                      child: Icon(
-                        Icons.person_rounded,
-                        size: 42,
-                        color: Colors.deepPurple.shade400,
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    const Text(
-                      'Organization Head',
-                      style: TextStyle(
-                        fontSize: 21,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      'Organization account',
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    _ProfileInfoRow(
-                      icon: Icons.badge_outlined,
-                      title: 'Role',
-                      value: 'Organization Head',
-                    ),
-
-                    _ProfileInfoRow(
-                      icon: Icons.business_outlined,
-                      title: 'Organization',
-                      value: 'Loading...',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-
-// ============================================================
-// SHARED UI
+// SHARED BACKGROUND
 // ============================================================
 
 class _PageBackground extends StatelessWidget {
@@ -389,6 +382,8 @@ class _PageBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
+      height: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -396,7 +391,7 @@ class _PageBackground extends StatelessWidget {
           colors: [
             Color(0xFFF5F3FF),
             Color(0xFFF8FAFF),
-            Color(0xFFFFFFFF),
+            Colors.white,
           ],
         ),
       ),
@@ -405,6 +400,9 @@ class _PageBackground extends StatelessWidget {
   }
 }
 
+// ============================================================
+// HEADER
+// ============================================================
 
 class _Header extends StatelessWidget {
   final String title;
@@ -428,6 +426,7 @@ class _Header extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
+                  color: Color(0xFF262342),
                 ),
               ),
               const SizedBox(height: 4),
@@ -441,7 +440,6 @@ class _Header extends StatelessWidget {
             ],
           ),
         ),
-
         Container(
           width: 46,
           height: 46,
@@ -464,8 +462,13 @@ class _Header extends StatelessWidget {
   }
 }
 
+// ============================================================
+// WELCOME CARD
+// ============================================================
 
 class _WelcomeCard extends StatelessWidget {
+  const _WelcomeCard();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -513,6 +516,9 @@ class _WelcomeCard extends StatelessWidget {
   }
 }
 
+// ============================================================
+// STATISTICS CARD
+// ============================================================
 
 class _StatCard extends StatelessWidget {
   final IconData icon;
@@ -569,6 +575,9 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+// ============================================================
+// QUICK ACTION CARD
+// ============================================================
 
 class _QuickActionCard extends StatelessWidget {
   final IconData icon;
@@ -583,109 +592,51 @@ class _QuickActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
+    return Material(
+      color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
-              icon,
-              color: const Color(0xFF7C3AED),
-              size: 30,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-
-class _PaymentSummaryCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-
-  const _PaymentSummaryCard({
-    required this.title,
-    required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.deepPurple.shade50,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.deepPurple.shade600,
-            ),
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 14,
+                offset: const Offset(0, 5),
               ),
-            ),
+            ],
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                color: const Color(0xFF7C3AED),
+                size: 30,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
+// ============================================================
+// PROFILE INFORMATION ROW
+// ============================================================
 
 class _ProfileInfoRow extends StatelessWidget {
   final IconData icon;
@@ -717,10 +668,13 @@ class _ProfileInfoRow extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontWeight: FontWeight.w700,
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

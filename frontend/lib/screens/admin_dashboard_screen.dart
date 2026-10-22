@@ -6,10 +6,16 @@ import 'admin_organization_heads_screen.dart';
 
 import '../models/organization.dart';
 import '../models/organizer.dart';
+import '../models/student.dart';
+import '../models/department_head.dart';
+import '../models/organization_head.dart';
 import '../models/user_profile.dart';
 
 import '../services/admin_organization_service.dart';
 import '../services/admin_organizer_service.dart';
+import '../services/admin_student_service.dart';
+import '../services/admin_department_head_service.dart';
+import '../services/admin_organization_head_service.dart';
 
 import '../storage/token_storage.dart';
 
@@ -39,6 +45,9 @@ class _AdminDashboardScreenState
 
   final AdminOrganizerService _organizerService =
       AdminOrganizerService();
+  final AdminStudentService _studentService = AdminStudentService();
+  final AdminDepartmentHeadService _departmentHeadService = AdminDepartmentHeadService();
+  final AdminOrganizationHeadService _organizationHeadService = AdminOrganizationHeadService();
 
   bool _loadingStats = true;
 
@@ -48,6 +57,12 @@ class _AdminDashboardScreenState
   int _organizerCount = 0;
   int _activeOrganizerCount = 0;
   int _pendingOrganizerCount = 0;
+  int _studentCount = 0;
+  int _activeStudentCount = 0;
+  int _departmentHeadCount = 0;
+  int _activeDepartmentHeadCount = 0;
+  int _organizationHeadCount = 0;
+  int _activeOrganizationHeadCount = 0;
 
   @override
   void initState() {
@@ -83,47 +98,38 @@ class _AdminDashboardScreenState
       final results = await Future.wait([
         _organizationService.getAllOrganizations(token),
         _organizerService.getAllOrganizers(token),
+        _studentService.getAllStudents(token),
+        _departmentHeadService.getAllDepartmentHeads(token),
+        _organizationHeadService.getAllOrganizationHeads(token),
       ]);
 
-      final List<Organization> organizations =
-          results[0] as List<Organization>;
+      final List<Organization> organizations = results[0] as List<Organization>;
+      final List<Organizer> organizers = results[1] as List<Organizer>;
+      final List<Student> students = results[2] as List<Student>;
+      final List<DepartmentHead> departmentHeads = results[3] as List<DepartmentHead>;
+      final List<OrganizationHead> organizationHeads = results[4] as List<OrganizationHead>;
 
-      final List<Organizer> organizers =
-          results[1] as List<Organizer>;
-
-      final Iterable<Organizer> activeOrganizers =
-          organizers.where(
-        (organizer) =>
-            organizer.accountStatus.toUpperCase() ==
-                'ACTIVE' &&
-            !organizer.firstLogin,
-      );
-
-      final Iterable<Organizer> pendingOrganizers =
-          organizers.where(
-        (organizer) =>
-            organizer.accountStatus.toUpperCase() ==
-                'ACTIVE' &&
-            organizer.firstLogin,
-      );
+      final activeOrganizers = organizers.where((x) => x.accountStatus.trim().toUpperCase() == 'ACTIVE' && !x.firstLogin).length;
+      final pendingOrganizers = organizers.where((x) => x.accountStatus.trim().toUpperCase() == 'ACTIVE' && x.firstLogin).length;
+      final activeStudents = students.where((x) => x.accountStatus.trim().toUpperCase() == 'ACTIVE').length;
+      final activeDepartmentHeads = departmentHeads.where((x) => x.accountStatus.trim().toUpperCase() == 'ACTIVE' && !x.firstLogin).length;
+      final activeOrganizationHeads = organizationHeads.where((x) => x.accountStatus.trim().toUpperCase() == 'ACTIVE' && !x.firstLogin).length;
 
       if (!mounted) {
         return;
       }
 
       setState(() {
-        _organizationCount =
-            organizations.length;
-
-        _organizerCount =
-            organizers.length;
-
-        _activeOrganizerCount =
-            activeOrganizers.length;
-
-        _pendingOrganizerCount =
-            pendingOrganizers.length;
-
+        _organizationCount = organizations.length;
+        _organizerCount = organizers.length;
+        _activeOrganizerCount = activeOrganizers;
+        _pendingOrganizerCount = pendingOrganizers;
+        _studentCount = students.length;
+        _activeStudentCount = activeStudents;
+        _departmentHeadCount = departmentHeads.length;
+        _activeDepartmentHeadCount = activeDepartmentHeads;
+        _organizationHeadCount = organizationHeads.length;
+        _activeOrganizationHeadCount = activeOrganizationHeads;
         _loadingStats = false;
       });
     } catch (e) {
@@ -613,6 +619,42 @@ Future<void> _openOrganizationHeads() async {
                 value: _loadingStats
                     ? '...'
                     : '$_organizationCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.school_rounded,
+                title: 'Students',
+                value: _loadingStats ? '...' : '$_studentCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.verified_rounded,
+                title: 'Active Students',
+                value: _loadingStats ? '...' : '$_activeStudentCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.account_balance_rounded,
+                title: 'Department Heads',
+                value: _loadingStats ? '...' : '$_departmentHeadCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.verified_user_rounded,
+                title: 'Active Department Heads',
+                value: _loadingStats ? '...' : '$_activeDepartmentHeadCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.groups_2_rounded,
+                title: 'Organization Heads',
+                value: _loadingStats ? '...' : '$_organizationHeadCount',
+              ),
+
+              _OverviewCard(
+                icon: Icons.verified_user_rounded,
+                title: 'Active Organization Heads',
+                value: _loadingStats ? '...' : '$_activeOrganizationHeadCount',
               ),
 
               _OverviewCard(
