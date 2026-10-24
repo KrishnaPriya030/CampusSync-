@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'head_event_management_screen.dart';
 import 'head_finance_screen.dart';
-import 'notifications_screen.dart';
 class DepartmentHeadDashboardScreen extends StatefulWidget {
   const DepartmentHeadDashboardScreen({super.key});
 
@@ -19,15 +18,17 @@ class _DepartmentHeadDashboardScreenState
     _DepartmentHeadEventsTab(),
     _DepartmentHeadPaymentsTab(),
     _DepartmentHeadProfileTab(),
-    const NotificationsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
+      backgroundColor: const Color(0xFFF5F3FF),
+      body: SafeArea(
+        child: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: _buildBottomNavigationBar(),
     );
@@ -55,6 +56,7 @@ class _DepartmentHeadDashboardScreenState
               height: 70,
               backgroundColor: Colors.transparent,
               elevation: 0,
+              indicatorColor: const Color(0xFFEDE9FE),
               selectedIndex: _currentIndex,
               onDestinationSelected: (index) {
                 setState(() {
@@ -81,11 +83,6 @@ class _DepartmentHeadDashboardScreenState
                   icon: Icon(Icons.person_outline_rounded),
                   selectedIcon: Icon(Icons.person_rounded),
                   label: 'Profile',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.notifications_outlined),
-                  selectedIcon: Icon(Icons.notifications_rounded),
-                  label: 'Alerts',
                 ),
               ],
             ),
@@ -231,13 +228,15 @@ class _DepartmentHeadEventsTab extends StatelessWidget {
 
 class _DepartmentHeadPaymentsTab extends StatelessWidget {
   const _DepartmentHeadPaymentsTab();
-  @override
-  Widget build(BuildContext context) => const HeadFinanceScreen(organizationHead: false);
-}
 
-// ============================================================
-// PROFILE
-// ============================================================
+  @override
+  Widget build(BuildContext context) {
+    // Reuse the existing finance screen with the Department Head role.
+    // HeadFinanceService loads the department-scoped payments and refunds
+    // from the existing backend endpoints.
+    return const HeadFinanceScreen(organizationHead: false);
+  }
+}
 
 class _DepartmentHeadProfileTab extends StatelessWidget {
   const _DepartmentHeadProfileTab();

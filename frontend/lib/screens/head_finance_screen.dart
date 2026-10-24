@@ -21,6 +21,7 @@ class _HeadFinanceScreenState extends State<HeadFinanceScreen>
   late final TabController _tabs;
 
   bool _loading = true;
+  bool _requestInProgress = false;
   String? _error;
 
   List<Map<String, dynamic>> _payments = [];
@@ -76,12 +77,9 @@ class _HeadFinanceScreenState extends State<HeadFinanceScreen>
   }
 
   Future<void> _load() async {
-    if (!mounted || _loading && _error == null && _payments.isNotEmpty) {
-      // Prevent an accidental overlapping initial load.
-      // Refresh actions remain available once loading completes.
-      if (!mounted) return;
-    }
+    if (!mounted || _requestInProgress) return;
 
+    _requestInProgress = true;
     setState(() {
       _loading = true;
       _error = null;
@@ -108,6 +106,8 @@ class _HeadFinanceScreenState extends State<HeadFinanceScreen>
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
       });
+    } finally {
+      _requestInProgress = false;
     }
   }
 
@@ -230,14 +230,15 @@ class _HeadFinanceScreenState extends State<HeadFinanceScreen>
                   'Student',
                 ),
                 subtitle:
-                    'Event: ${_str(payment, 'eventId')} • '
+                    'Event: ${_str(payment, 'eventTitle', _str(payment, 'eventId'))} • '
                     '${_str(payment, 'status')}',
                 amount:
                     '₹${_amount(payment).toStringAsFixed(2)}',
                 details: [
-                  'Payment ID: ${_str(payment, 'paymentId')}',
+                  'Payment ID: ${_str(payment, 'id', _str(payment, 'paymentId'))}',
                   'Registration ID: ${_str(payment, 'registrationId')}',
-                  'Email: ${_str(payment, 'studentEmail')}',
+                  'Student ID: ${_str(payment, 'studentId')}',
+                  'Email: ${_str(payment, 'email', _str(payment, 'studentEmail'))}',
                   'Reference: ${_str(payment, 'paymentReference')}',
                   'Created: ${_str(payment, 'createdAt')}',
                   'Paid at: ${_str(payment, 'paidAt')}',
@@ -281,10 +282,10 @@ class _HeadFinanceScreenState extends State<HeadFinanceScreen>
                 amount:
                     '₹${_amount(refund).toStringAsFixed(2)}',
                 details: [
-                  'Refund ID: ${_str(refund, 'refundId')}',
-                  'Payment ID: ${_str(refund, 'paymentId')}',
+                  'Refund ID: ${_str(refund, 'id', _str(refund, 'refundId'))}',
+                  'Payment ID: ${_str(refund, 'paymentId', _str(refund, 'payment_id'))}',
                   'Registration ID: ${_str(refund, 'registrationId')}',
-                  'Email: ${_str(refund, 'studentEmail')}',
+                  'Email: ${_str(refund, 'email', _str(refund, 'studentEmail'))}',
                   'Requested: ${_str(refund, 'requestedAt')}',
                   'Processed: ${_str(refund, 'processedAt')}',
                   'Processing note: ${_str(refund, 'processingNote')}',
